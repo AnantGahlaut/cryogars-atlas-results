@@ -218,9 +218,47 @@ clipped during export cannot be recovered by editing a palette. Palette
 percentiles describe colour stretches, not the fraction of observations
 retained. Use HDF5 arrays for quantitative analysis.
 
-Finite-cell percentages include derived values. The DEM-relative percentage
-is a ratio of counts, not a spatial intersection test. Missing elevation
-samples remain gaps rather than zero elevation.
+The revised Info card separates two finite-cell counts (SNEX-024):
+
+- **Valid stored:** finite cells divided by all cells in the stored archive grid,
+  at the archive resolution (normally 3 m). These include processed and derived
+  values; finite does not establish measurement quality.
+- **Valid shown:** finite selected-layer samples with finite terrain support,
+  divided by all positions on the current rendering grid. Its dimensions and
+  spacing match Shown. Counts refresh when the selected layer or rendering
+  detail changes, including automatic detail changes while zooming. A numeric
+  zero counts as valid, including a mask value classified as zero.
+
+At rendering level L, the viewer samples rows and columns at stride 2^L on
+its terrain grid. The denominator is ceil(W / 2^L) × ceil(H / 2^L), and spacing
+is the base terrain spacing × 2^L. Layer values are first mapped to the terrain
+grid by the existing coordinate mapping. The numerator counts sampled positions
+where both the mapped layer value and terrain elevation are finite. This measures
+support on that whole sampling grid; it does not count screen pixels, restrict to
+the camera viewport, or count only vertices referenced by rendered triangles.
+It does not imply a new scientific resampling or retrieval.
+
+Details retains **Valid display** for the exported layer grid, before terrain
+mapping and render-detail sampling, at that layer's `cell_m`. New exports retain
+`display_valid` / `display_total`; older pages count their decoded packed array.
+A scalar block with one finite input and three missing inputs can produce one
+finite display cell: its stored fraction is 25% and display fraction is 100%,
+without adding measurements. Circular means can instead become undefined on
+cancellation. Whole-block cropping also changes the denominator.
+
+Temporary comparisons have no stored archive dataset, so their Info card shows
+only Valid shown, using their mapped result at the current detail level. For a
+difference the result requires shared finite A/B values; A and B views retain
+their own result support. Details reports the exported result-grid count. The
+separate comparison summary continues to report overlap used by the analysis.
+Palette limits and mask cutoff do not change finite support. Zooming may change
+Valid shown through automatic rendering detail; panning and clipping at the
+same detail level do not. Stored and exported counts remain fixed.
+
+The old DEM-relative percentage was a ratio of counts, not a spatial intersection
+test; it is removed from the revised card. Installed pages remain unchanged until
+an approved UI rollout. Missing elevation samples remain gaps rather than zero
+elevation.
 
 ## Evaluation and provenance
 

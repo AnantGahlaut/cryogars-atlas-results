@@ -239,7 +239,9 @@
   #rangeState span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
   /* ---- info card ---- */
-  #info{left:12px;top:12px;width:280px;z-index:12}
+  #info{left:12px;top:12px;width:280px;max-width:calc(100% - 24px);
+    max-height:calc(100% - 24px);z-index:12;display:flex;flex-direction:column;overflow:hidden}
+  #info > :not(.ib){flex:none}
   #info .ih{display:flex;align-items:center;gap:8px;padding:8px 10px;
     border-bottom:1px solid var(--hair)}
   #info .ih .bar{width:3px;align-self:stretch;background:var(--dc);
@@ -251,7 +253,8 @@
   #info .ih .tt i{display:block;font-family:var(--mono);font-size:9px;
     font-style:normal;color:var(--ink-4);overflow:hidden;direction:rtl;
     text-overflow:ellipsis;white-space:nowrap;text-align:left}
-  #info .ib{padding:8px 10px 10px}
+  #info .ib{padding:8px 10px 10px;min-height:0;overflow:auto;overscroll-behavior:contain;
+    scrollbar-width:thin;scrollbar-color:var(--hair-2) transparent}
   .xbtn{width:17px;height:17px;line-height:16px;text-align:center;flex:none;
     border:0;background:none;color:var(--ink-4);cursor:pointer;border-radius:2px;
     font-family:var(--mono);font-size:14px}
@@ -275,18 +278,28 @@
     width:12px;height:12px;border-radius:50%;border:1px solid var(--ink-4);
     color:var(--ink-4);font-family:var(--ui);font-size:8.5px;font-weight:600;
     cursor:pointer;margin-left:5px;vertical-align:middle;user-select:none;
+    padding:0;background:transparent;line-height:1;
     transition:color .15s,border-color .15s}
   .ibtn:hover{color:var(--live);border-color:var(--live)}
-  #metricHelp{display:none;margin-top:9px;padding:9px 10px;border-radius:2px;
-    background:var(--void);border:1px solid var(--hair);
-    border-left:2px solid var(--live);font-size:10.5px;line-height:1.65;
-    color:var(--ink-2)}
-  #metricHelp.on{display:block}
-  #metricHelp b{color:var(--ink);font-weight:600}
-  #metricHelp code{font-family:var(--mono);font-size:9.5px;color:var(--lidar)}
-  #metricHelp p{margin:0 0 7px}
-  #metricHelp p:last-child{margin:0}
-  #metricHelp .sep{border-top:1px solid var(--hair);margin:7px 0;padding-top:7px}
+  #metricHelp{position:fixed;right:12px;top:52px;bottom:38px;width:380px;
+    max-width:calc(100vw - 24px);z-index:75;display:flex;flex-direction:column;min-height:0;
+    background:var(--panel);color:var(--ink);border:1px solid var(--hair-2);border-radius:4px;
+    box-shadow:0 12px 32px #0004;font-family:var(--ui)}
+  #metricHelp[hidden]{display:none!important;pointer-events:none}
+  #metricHelp header{display:flex;align-items:start;gap:12px;flex:none;padding:18px;border-bottom:1px solid var(--hair)}
+  #metricHelp header>div{flex:1;min-width:0}
+  #metricHelp .eyebrow{font:11px var(--mono);color:var(--live);margin:0 0 7px;letter-spacing:normal;text-transform:none}
+  #metricHelp h2{font:500 20px/1.35 var(--disp);margin:0}
+  #metricHelpClose{width:26px;height:26px;padding:0;flex:none;border:0;border-radius:3px;
+    background:transparent;color:var(--ink-3);font:22px/1 var(--ui);cursor:pointer}
+  #metricHelpClose:hover{color:var(--ink);background:var(--panel-2)}
+  #metricHelpContent{padding:18px;min-height:0;overflow:auto;overscroll-behavior:contain;
+    scrollbar-width:thin;scrollbar-color:var(--hair-2) transparent;font-size:14px;line-height:1.7;color:var(--ink-2)}
+  #metricHelpContent b{color:var(--ink);font-weight:600}
+  #metricHelpContent p{margin:0 0 14px}
+  #metricHelpContent p:last-child{margin:0}
+  #metricHelpContent .sep{border-top:1px solid var(--hair);margin:16px 0 0;padding-top:14px}
+  #metricHelp :focus-visible,.ibtn:focus-visible{outline:2px solid var(--live);outline-offset:3px}
   .bar{--p:0}
   .meter{height:3px;background:var(--hair);border-radius:2px;overflow:hidden;
     margin-top:4px}
@@ -676,27 +689,37 @@
         <button class="xbtn" id="iClose" title="close (i)">&times;</button>
       </div>
       <div class="ib"><table class="kv" id="iBody"></table>
-        <div id="metricHelp">
-          <p><b>valid</b> &mdash; cells with a finite value after recorded
-             processing, as a share of the whole stored rectangle. Values may
-             be measured, derived or interpolated. Missing cells can lie outside
-             survey coverage or within it, including filtered cells.</p>
-          <p><b>valid-cell count relative to DEM</b> &mdash; the layer's finite-cell
-             count divided by the base DEM's finite-cell count on the common
-             archive grid. The base DEM is <code>100%</code> by definition.
-             Above 100% means more finite cells than the DEM. This count ratio
-             does not measure spatial overlap: even disjoint sets of cells can
-             have the same count.</p>
-          <p class="sep">Neither number is a quality measure. For
-             interferometric phase, candidate screens include
-             <code>cor &ge; 0.30</code> and <code>local_incidence &lt; 90&deg;</code>.
-             The complementary condition is <b>incidence &ge; 90&deg;</b>;
-             it does not test whether other terrain blocks the radar.
-             These screens alone do not establish that a cell can be inverted.</p>
-        </div>
+
       </div>
     </div>
     <div class="float" id="reopen">info</div>
+    <aside id="metricHelp" role="dialog" aria-modal="false" aria-labelledby="metricHelpTitle" hidden>
+      <header><div><p class="eyebrow">Viewer help</p><h2 id="metricHelpTitle">Valid cells</h2></div>
+        <button id="metricHelpClose" type="button" aria-label="Close valid cells help">&times;</button></header>
+      <div id="metricHelpContent">
+          <p><b>Valid stored</b> &mdash; cells with a finite value after recorded
+             processing, divided by all cells in the stored archive rectangle at
+             the stated grid spacing. Values may be measured, derived or interpolated.
+             Missing or invalid count metadata is shown as unknown.</p>
+          <p><b>Valid shown</b> &mdash; samples with finite layer and terrain values
+             on the current rendering grid, divided by all sampled grid positions.
+             Its count and spacing update with the <b>shown</b> mesh detail. Zero is
+             valid, including a mask's zero state. This describes grid samples,
+             not visible screen pixels, viewport clipping or triangle counts.</p>
+          <p>Changing rendering detail samples the existing terrain-aligned array;
+             it does not average new blocks. Finer or coarser sampling can raise or
+             lower the percentage. Temporary comparisons have no stored archive
+             dataset: their shown count follows the selected A, B or difference
+             result, with differences requiring finite values from both inputs.</p>
+          <p><b>Valid display</b> in Details counts finite cells in the exported
+             display grid before terrain mapping or rendering detail. Export block
+             averaging can make this percentage higher than stored validity without
+             adding measurements; edge cropping and product-specific reductions can
+             also change it.</p>
+          <p class="sep">These counts describe data availability, not measurement
+             quality or the fraction passing a coherence cutoff.</p>
+      </div>
+    </aside>
 
     <div class="float" id="dock">
       <div class="dh" id="dockH"><span>Controls</span><span id="dockT">&minus;</span></div>
@@ -1390,28 +1413,81 @@ function setOverlay(k){
 
 /* ================= info card ================= */
 const kvRow=(a,b)=>"<tr><td class='k'>"+a+"</td><td class='v'>"+b+"</td></tr>";
+const displayValidityCache=new WeakMap();
+function cellCounts(valid,total){
+  return Number.isSafeInteger(valid)&&Number.isSafeInteger(total)&&total>0&&valid>=0&&valid<=total
+    ?{valid,total}:null;
+}
+function displayCounts(L){
+  const total=L.w*L.h;
+  if(!Number.isSafeInteger(L.w)||!Number.isSafeInteger(L.h)||L.w<=0||L.h<=0||!Number.isSafeInteger(total))return null;
+  const declared=cellCounts(L.display_valid,L.display_total);
+  if(declared&&declared.total===total)return declared;
+  if(!displayValidityCache.has(L)){
+    let valid=0;
+    for(const value of decodeAt(L))if(Number.isFinite(value))valid++;
+    displayValidityCache.set(L,cellCounts(valid,total));
+  }
+  return displayValidityCache.get(L);
+}
+function validityValue(counts,cell){
+  const resolution=Number.isFinite(cell)&&cell>0?" @ "+cell.toLocaleString()+" m":" · grid spacing unknown";
+  if(!counts)return "Unknown"+resolution;
+  const pct=(100*counts.valid/counts.total).toFixed(1);
+  return "<b>"+pct+"%</b>"+resolution+"<br><small>"+
+    counts.valid.toLocaleString()+" / "+counts.total.toLocaleString()+"</small>"+
+    "<div class='meter'><i style='width:"+pct+"%'></i></div>";
+}
+function validityRow(label,counts,cell){
+  return kvRow(label,validityValue(counts,cell));
+}
+function validityRows(L,help=false){
+  const info=help?"<button type='button' class='ibtn' id='iHelp' aria-label='About valid cells' aria-controls='metricHelp' aria-haspopup='dialog' aria-expanded='false' title='About valid cells'>i</button>":"";
+  return (L.comparisonTemporary?"":validityRow("Valid stored"+info,cellCounts(L.valid,L.total),G.res_m))+
+    validityRow("Valid display"+(L.comparisonTemporary?info:""),displayCounts(L),L.cell_m);
+}
+const shownValidityCache=new WeakMap();
+let shownInfoKey=null;
+function shownCounts(values,terrain,level){
+  const lv=levels[level];
+  if(!values||!terrain||!lv||values.length!==W*H||terrain.length!==W*H)return null;
+  let cached=shownValidityCache.get(values);
+  if(!cached||cached.terrain!==terrain){
+    cached={terrain,levels:new Map()};shownValidityCache.set(values,cached);
+  }
+  if(!cached.levels.has(level)){
+    const stride=1<<level;let valid=0;
+    for(let row=0;row<lv.h;row++)for(let col=0;col<lv.w;col++){
+      const i=row*stride*W+col*stride;
+      if(Number.isFinite(values[i])&&Number.isFinite(terrain[i]))valid++;
+    }
+    cached.levels.set(level,cellCounts(valid,lv.w*lv.h));
+  }
+  return cached.levels.get(level);
+}
 let infoOpen=true;
 let shownInfoLevel=-1;
 function syncShownResolution(){
   const out=$("iShown"),lv=levels[curLevel];if(!out||!lv)return;
   out.textContent=lv.w.toLocaleString()+" × "+lv.h.toLocaleString()+" @ "+lv.cell.toFixed(0)+" m";
   out.title="Current rendered terrain detail";
+  const shown=$("iShownValidity");
+  if(shown){
+    const counts=shownInfoKey&&P.arrays[shownInfoKey]?shownCounts(floats(shownInfoKey),elev,curLevel):null;
+    shown.innerHTML=validityValue(counts,lv.cell);
+    shown.title="Finite layer and terrain values at the current rendering-grid samples / all sampled grid positions; not visible pixels or viewport coverage.";
+  }
 }
 function renderInfo(k){
   const L=P.arrays[k]; if(!L)return;
+  shownInfoKey=k;
   const d=DOM[L.domain]||DOM.meta;
   const n=nodeAt(L.source)||{};
   $("info").style.setProperty("--dc",d.c);
   $("iName").textContent=L.label;
   $("iPath").textContent=k;
   $("iPath").title=k;
-  /* `valid` uses the stored rectangle. Dividing by the DEM's finite fraction
-     gives a count ratio on the common archive grid, not spatial overlap. */
-  const pct=100*L.valid/L.total;
-  const denom=G.dem_valid_fraction||0;
-  const cov=denom>0?(L.valid/L.total)/denom*100:NaN;
-  const covTxt=isFinite(cov)?cov.toFixed(1)+"%":"—";
-  const info="<span class='ibtn' id='iHelp' title='what do these mean?'>i</span>";
+  const info="<button type='button' class='ibtn' id='iHelp' aria-label='About valid cells' aria-controls='metricHelp' aria-haspopup='dialog' aria-expanded='false' title='About valid cells'>i</button>";
   $("iBody").innerHTML=
     kvRow("quantity","<b>"+esc(L.leaf)+"</b>"+(L.unit?" "+esc(L.unit):""))+
     (L.date?kvRow("acquired",esc(L.date)):"")+
@@ -1421,12 +1497,14 @@ function renderInfo(k){
     kvRow("full grid",G.full[1].toLocaleString()+" × "+G.full[0].toLocaleString())+
     kvRow("data grid",L.w.toLocaleString()+" × "+L.h.toLocaleString()+" @ "+L.cell_m.toFixed(0)+" m")+
     kvRow("shown","<span id='iShown'>—</span>")+
-    kvRow("valid"+info,"<b>"+pct.toFixed(1)+"%</b><div class='meter'><i style='width:"
-      +pct.toFixed(1)+"%'></i></div>")+
-    kvRow("valid-cell count relative to DEM","<b>"+covTxt+"</b><div class='meter'><i style='width:"
-      +Math.min(100,isFinite(cov)?cov:0).toFixed(1)+"%'></i></div>");
+    (L.comparisonTemporary?"":validityRow("Valid stored"+info,cellCounts(L.valid,L.total),G.res_m))+
+    kvRow("Valid shown"+(L.comparisonTemporary?info:""),"<div id='iShownValidity'>—</div>");
   const hb=$("iHelp");
-  if(hb)hb.onclick=e=>{e.stopPropagation();$("metricHelp").classList.toggle("on");};
+  if(hb){
+    hb.setAttribute("aria-expanded",String(!$("metricHelp").hidden));
+    hb.onclick=e=>{e.stopPropagation();setMetricHelp($("metricHelp").hidden);};
+    hb.onkeydown=e=>e.stopPropagation();
+  }
   syncShownResolution();
 }
 function setInfo(on){
@@ -1436,6 +1514,35 @@ function setInfo(on){
 }
 $("iClose").onclick=()=>setInfo(false);
 $("reopen").onclick=()=>setInfo(true);
+
+/* ================= validity help ================= */
+function setMetricHelp(on,restoreFocus=true){
+  const panel=$("metricHelp"),button=$("iHelp");
+  if(on){
+    const notes=$("nxn-panel");
+    if(notes&&!notes.hidden)$("nxn-close")?.click();
+  }
+  panel.hidden=!on;
+  button?.setAttribute("aria-expanded",String(on));
+  if(on){$("metricHelpContent").scrollTop=0;$("metricHelpClose").focus();}
+  else if(restoreFocus&&button){
+    const state=getComputedStyle($("info"));
+    if(state.display!=="none"&&state.visibility!=="hidden")button.focus();
+  }
+}
+$("metricHelpClose").onclick=()=>setMetricHelp(false);
+$("metricHelp").onkeydown=e=>{
+  e.stopPropagation();
+  if(e.key==="Escape"){e.preventDefault();setMetricHelp(false);}
+};
+// Product notes stops bubbling clicks; capture its trigger before it opens.
+document.addEventListener("click",e=>{
+  if(e.target.closest?.("#nxn-trigger"))setMetricHelp(false,false);
+},true);
+new MutationObserver(()=>{
+  const state=getComputedStyle($("info"));
+  if(state.display==="none"||state.visibility==="hidden")setMetricHelp(false,false);
+}).observe($("info"),{attributes:true,attributeFilter:["style"]});
 
 /* ================= render ================= */
 let frames=0,fpsT=performance.now(),glOn=true;
@@ -1800,8 +1907,7 @@ function renderDetails(){
         kvRow("dtype",esc(n.dtype||"—"))+
         kvRow("chunks",n.chunks?n.chunks.join(" × "):"contiguous")+
         kvRow("stored",n.stored!=null?(n.stored/1048576).toFixed(2)+" MB":"—")+
-        (L?kvRow("valid cells",L.valid.toLocaleString()+" / "+L.total.toLocaleString()
-          +"  ("+(100*L.valid/L.total).toFixed(1)+"%)"):"")+
+        (L?validityRows(L):"")+
         (L?kvRow("value range",fmt(L.lo)+" … "+fmt(L.hi)
           +(L.unit?" "+esc(L.unit):"")):"")+
         (L&&L.stretched?kvRow("display stretch","2nd–98th percentile"):"")+

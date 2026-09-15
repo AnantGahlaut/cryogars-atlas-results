@@ -30,9 +30,9 @@ function templateFunction(name){
   return template.slice(start,next);
 }
 function bridgeHarness(options={}){
-  const original={w:2,h:2,cell_m:3,label:'Elevation',leaf:'elevation',lo:1,hi:4,unit:'m',b64:'',bits:16,valid:2,total:4};
-  const stored={},P={site:'test',grid:{w:2,h:2,cell_m:3,origin:[100,200],pixel:[3,-3],full:[2,2],dem_valid_fraction:.5},identification:{common_crs_epsg:32612},arrays:{dem:original},dem_path:'dem'};
-  const elements=new Map(),element=id=>{if(!elements.has(id))elements.set(id,{value:'',style:{setProperty(){}},classList:{toggle(){}}});return elements.get(id);};
+  const original={w:2,h:2,cell_m:3,label:'Elevation',leaf:'elevation',lo:1,hi:4,unit:'m',b64:'AQACAAMAAAA=',bits:16,valid:2,total:4};
+  const stored={},P={site:'test',grid:{w:2,h:2,cell_m:3,origin:[100,200],pixel:[3,-3],full:[2,2],res_m:3,dem_valid_fraction:.5},identification:{common_crs_epsg:32612},arrays:{dem:original},dem_path:'dem'};
+  const elements=new Map(),element=id=>{if(!elements.has(id))elements.set(id,{value:'',style:{setProperty(){}},classList:{toggle(){}},setAttribute(){}});return elements.get(id);};
   if(options.info){
     // Browser DOM boundary only: renderInfo below remains the real template function.
     const body=element('iBody');
@@ -48,11 +48,12 @@ function bridgeHarness(options={}){
   }
   const uniforms={};
   const ctx={P,G:P.grid,W:2,H:2,DEM:'dem',window:{SnowCompareCore:require('./core')},primKey:'dem',ovKey:null,active:'dem',glOn:true,infoOpen:false,
-    values:{},floats:k=>ctx.values[k]||new Float32Array([1,2,3,4]),cache:new Map(),tabs:[{id:'dem',kind:'layer',key:'dem',pin:true},{id:'timeline',kind:'timeline',pin:true},{id:'details',kind:'details',pin:true}],
+    elev:new Float32Array([100,100,100,100]),shownInfoLevel:-1,
+    values:{dem:new Float32Array([1,2,3,4])},floats:k=>ctx.values[k]||new Float32Array([1,2,3,4]),cache:new Map(),tabs:[{id:'dem',kind:'layer',key:'dem',pin:true},{id:'timeline',kind:'timeline',pin:true},{id:'details',kind:'details',pin:true}],
     PREF:{palettes:{},customs:{},ranges:{},rangeModes:{},reverse:{},savedPalettes:{},typeActive:{}},
     BUILTIN_STOPS:{terrain:[[0,'#000000'],[1,'#ffffff']],viridis:[[0,'#440154'],[1,'#fde725']],diverging:[[0,'#b42d1d'],[.5,'#f6f5f0'],[1,'#1d5aa7']]},
     PALETTE_LABELS:{terrain:'Terrain',viridis:'Viridis',diverging:'Diverging'},
-    Uint8Array,Float32Array,Map,Math,Number,btoa:s=>Buffer.from(s,'binary').toString('base64'),
+    Uint8Array,Float32Array,Map,Math,Number,atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64'),
     setPrimary(k){ctx.primKey=k;ctx.uploaded=Array.from(ctx.floats(k));if(options.info){ctx.syncRangeStatus(k);ctx.renderInfo(k);}ctx.draw();},closeLegendEditor(){},renderDetails(){},renderTimeline(){},
     setOverlay(k){ctx.ovKey=k;ctx.overlayUploaded=k?Array.from(ctx.floats(k)):null;ctx.draw();},$:element,renderTabs(){},nodeAt:()=>null,
     draw(){},syncLegendEditor(){},
@@ -65,7 +66,7 @@ function bridgeHarness(options={}){
   vm.runInContext(template.slice(template.indexOf('function savePrefs('),template.indexOf('applyUiPrefs(false);')),ctx);
   vm.runInContext(templateFunction('activate')+templateFunction('openLayer')+templateFunction('closeTab').split('/* ================= tree')[0],ctx);
   if(options.info){
-    vm.runInContext(template.slice(template.indexOf('const kvRow='),template.indexOf('let infoOpen='))+
+    vm.runInContext(templateFunction('decodeAt')+template.slice(template.indexOf('const kvRow='),template.indexOf('let infoOpen='))+
       templateFunction('syncShownResolution')+templateFunction('renderInfo'),ctx);
   }
   if(options.realPrimary){
@@ -73,6 +74,13 @@ function bridgeHarness(options={}){
     ctx.gl.bindBuffer=()=>{};ctx.gl.bufferData=(_target,v)=>{ctx.uploaded=Array.from(v);};
     for(const k of ['uCmap','uReverse','uDiverging','uAngleKind'])ctx.U[k]=k;
     vm.runInContext(templateFunction('customRampCss')+templateFunction('setPrimary'),ctx);
+  }
+  if(options.realDraw){
+    Object.assign(ctx,{canvas:{clientWidth:100,clientHeight:100},opts:{lod:'auto',disp:'solid',sunAz:0,sunEl:0,relief:1},
+      view:{dist:1,tx:0,ty:0,az:0},basis:()=>({e:[0,0,1]}),mul:()=>[],persp:()=>[],viewMat:()=>[],drawPits(){},frames:0,fpsT:0,performance:{now:()=>0}});
+    for(const k of ['viewport','clear','uniformMatrix4fv','uniform3f','bindBuffer','drawElements'])ctx.gl[k]=()=>{};
+    vm.runInContext(template.slice(template.indexOf('function autoLevel(){'),template.indexOf('/* ================= layers'))+
+      templateFunction('draw'),ctx);
   }
   if(options.withoutAngular)ctx.angularKind=undefined;
   vm.runInContext(fs.readFileSync('viewer_compare/bridge.js','utf8'),ctx);
@@ -82,24 +90,134 @@ const comparison=(overrides={})=>({id:'difference',label:'Difference',unit:'m',g
   values:new Float32Array([-50,0,100,NaN]),lo:-10,hi:20,cmap:'diverging',
   style:{stops:[[0,'#ff0000'],[1,'#0000ff']],reverse:false},paletteName:'Saved · Red blue',rangeLabel:'Custom 25–75% stretch',...overrides});
 
-test('temporary Info counts use analysis-grid cells and leave ordinary metrics unchanged',()=>{
+test('Info separates stored counts from live shown samples and keeps exported counts in Details helpers',()=>{
+  const {ctx}=bridgeHarness({info:true});
+  ctx.P.arrays.dem={...ctx.P.arrays.dem,w:2,h:1,cell_m:6,valid:1,total:8,bits:8,
+    lo:0,hi:254,b64:Buffer.from([1,0]).toString('base64')};
+  ctx.values.dem=new Float32Array([0,NaN,1,NaN]);ctx.setPrimary('dem');
+  const rows=ctx.$('iBody').rows;
+  assert.ok(rows.some(r=>r.children[0].textContent.startsWith('Valid stored')));
+  assert.ok(rows.some(r=>r.children[0].textContent.startsWith('Valid shown')),'main card reports current rendering-grid support');
+  assert.equal(rows.some(r=>/Valid display|coverage|relative to DEM|shared cells/.test(r.children[0].textContent)),false);
+  assert.match(rows.find(r=>r.children[0].textContent.startsWith('Valid stored')).children[1].innerHTML,/<b>12\.5%<\/b> @ 3 m.*1 \/ 8/s);
+  assert.match(ctx.$('iShownValidity').innerHTML,/<b>50\.0%<\/b> @ 3 m.*2 \/ 4/s);
+  assert.match(ctx.validityRows(ctx.P.arrays.dem),/Valid display.*<b>50\.0%<\/b> @ 6 m.*1 \/ 2/s);
+  const raw=JSON.stringify(ctx.P.arrays.dem);ctx.levels.push({w:1,h:1,cell:6});ctx.curLevel=1;
+  ctx.PREF.palettes.dem='viridis';ctx.PREF.ranges.dem=[-5,5];ctx.setPrimary('dem');
+  assert.equal(ctx.$('iShown').textContent,'1 × 1 @ 6 m');
+  assert.match(ctx.$('iShownValidity').innerHTML,/<b>100\.0%<\/b> @ 6 m.*1 \/ 1/s);
+  assert.equal(JSON.stringify(ctx.P.arrays.dem),raw);
+});
+
+test('actual draw LOD changes refresh shown support with finite terrain and sampled edge positions',()=>{
+  const {ctx}=bridgeHarness({info:true,realDraw:true});ctx.W=5;ctx.H=5;
+  Object.assign(ctx.G,{w:5,h:5,cell_m:3});
+  ctx.levels=[{w:5,h:5,cell:3},{w:3,h:3,cell:6},{w:2,h:2,cell:12},null];
+  ctx.values.dem=Float32Array.from({length:25},(_,i)=>i);ctx.values.dem[1]=NaN;ctx.values.dem[12]=NaN;
+  ctx.elev=new Float32Array(25).fill(100);ctx.elev[10]=NaN;
+  ctx.setPrimary('dem');
+  for(const [distance,dimensions,pct,count] of [[1,'5 × 5 @ 3 m','88.0','22 / 25'],[3,'3 × 3 @ 6 m','77.8','7 / 9'],[5,'2 × 2 @ 12 m','100.0','4 / 4']]){
+    ctx.view.dist=distance;ctx.draw();
+    assert.equal(ctx.$('iShown').textContent,dimensions);
+    assert.match(ctx.$('iShownValidity').innerHTML,new RegExp('<b>'+pct.replace('.','\\.')+'%</b>.*'+count,'s'));
+  }
+  ctx.opts.lod='3';ctx.draw();assert.equal(ctx.curLevel,2,'unavailable mesh falls back to actual existing level');
+  ctx.P.arrays.other={...ctx.P.arrays.dem};ctx.values.other=new Float32Array(25).fill(NaN);ctx.values.other[0]=0;
+  ctx.openLayer('other');assert.match(ctx.$('iShownValidity').innerHTML,/<b>25\.0%<\/b> @ 12 m.*1 \/ 4/s);
+  const shown=ctx.$('iShownValidity').innerHTML;ctx.view.tx=999;ctx.view.ty=-999;ctx.draw();
+  assert.equal(ctx.$('iShownValidity').innerHTML,shown,'viewport and camera translation do not change grid support');
+  assert.match(ctx.$('iShownValidity').title,/rendering.grid samples/i);
+  assert.match(ctx.$('iShownValidity').title,/not visible pixels/i);
+});
+
+test('shown support caches by actual samples, terrain identity and level',()=>{
+  const {ctx}=bridgeHarness({info:true});
+  assert.equal(typeof ctx.shownCounts,'function');
+  ctx.levels.push({w:1,h:1,cell:6});
+  const values=new Float32Array([0,NaN,2,3]),terrain=new Float32Array([100,100,NaN,100]);
+  const first=ctx.shownCounts(values,terrain,0);assert.deepEqual({...first},{valid:2,total:4});
+  assert.equal(ctx.shownCounts(values,terrain,0),first,'cached count reused');
+  const coarse=ctx.shownCounts(values,terrain,1);assert.deepEqual({...coarse},{valid:1,total:1});
+  assert.equal(ctx.shownCounts(values,terrain,1),coarse);
+  assert.equal(ctx.shownCounts(values,terrain,0),first,'returning to a level reuses its count');
+  assert.deepEqual({...ctx.shownCounts(new Float32Array([NaN,1,2,3]),terrain,0)},{valid:2,total:4});
+  const changedTerrain=new Float32Array(4).fill(100);
+  assert.deepEqual({...ctx.shownCounts(values,changedTerrain,0)},{valid:3,total:4});
+  assert.deepEqual({...ctx.shownCounts(new Float32Array(4).fill(NaN),changedTerrain,0)},{valid:0,total:4});
+});
+
+test('legacy 8/16-bit counts include valid zero, reject malformed optional counts and cache by layer object',()=>{
+  const {ctx}=bridgeHarness({info:true}),decode=ctx.decodeAt;
+  let decodes=0;ctx.decodeAt=L=>{decodes++;return decode(L);};
+  for(const bits of [8,16]){
+    const data=bits===8?Buffer.from([1,0,2,0]):Buffer.from([1,0,0,0,2,0,0,0]);
+    for(const optional of [{},{display_valid:-1,display_total:4},{display_valid:5,display_total:4},
+      {display_valid:1.5,display_total:4},{display_valid:'2',display_total:4},
+      {display_valid:2,display_total:3},{display_valid:2,display_total:null}]){
+      ctx.P.arrays.dem={...ctx.P.arrays.dem,bits,lo:0,hi:(1<<bits)-2,b64:data.toString('base64'),...optional};
+      assert.equal(ctx.decodeAt(ctx.P.arrays.dem)[0],0,'code 1 represents a valid numeric zero');
+      const old=decodes;ctx.displayCounts(ctx.P.arrays.dem);ctx.displayCounts(ctx.P.arrays.dem);
+      assert.equal(decodes,old+1,'one native decode per immutable layer record');
+      const html=ctx.validityRows(ctx.P.arrays.dem);
+      assert.match(html,/<b>50\.0%<\/b>.*2 \/ 4/s);
+    }
+  }
+  ctx.P.arrays.dem={...ctx.P.arrays.dem,display_valid:2,display_total:4};
+  const old=decodes;ctx.displayCounts(ctx.P.arrays.dem);assert.equal(decodes,old,'valid exported counts avoid an extra decode');
+  ctx.P.arrays.dem={...ctx.P.arrays.dem,display_valid:undefined,display_total:undefined,b64:Buffer.alloc(8).toString('base64')};
+  assert.match(ctx.validityRows(ctx.P.arrays.dem),/<b>0\.0%<\/b>.*0 \/ 4/s);
+});
+
+test('missing or malformed stored counts remain unknown',()=>{
+  const {ctx}=bridgeHarness({info:true});
+  for(const native of [{valid:undefined},{total:undefined},{valid:null},{total:0},{valid:-1},{valid:5,total:4},{valid:'2'},{valid:1.5}]){
+    ctx.P.arrays.dem={...ctx.P.arrays.dem,valid:2,total:4,...native};ctx.setPrimary('dem');
+    const row=ctx.$('iBody').rows.find(r=>r.children[0].textContent.startsWith('Valid stored'));
+    assert.ok(row,'stored count row must identify missing metadata');
+    assert.match(row.children[1].innerHTML,/Unknown/);assert.doesNotMatch(row.children[1].innerHTML,/0\.0%|undefined|NaN/);
+  }
+});
+
+test('temporary A/B and difference Info shows actual terrain-grid support and omits stored duplicates',()=>{
   const {ctx,api}=bridgeHarness({info:true});ctx.setPrimary('dem');
   const originalRows=JSON.stringify(ctx.$('iBody').rows),originalRange=ctx.$('rangeStateLabel').textContent;
-  for(const values of [[1,NaN,NaN,NaN],[1,2,3,NaN],[1,2,3,4]]){
-    api.show(comparison({values:new Float32Array(values)}));
-    const rows=ctx.$('iBody').rows,shared=rows.find(r=>r.children[0].textContent==='shared cells');
-    assert.ok(shared,'temporary row identifies counts, not DEM coverage');
+  const a=[0,2,3,NaN],b=[0,NaN,NaN,4],difference=require('./core').difference(a,b).values;
+  for(const [id,values] of [['a',a],['b',b],['difference',difference]]){
+    api.show(comparison({id,values:new Float32Array(values)}));
+    const rows=ctx.$('iBody').rows,display=rows.find(r=>r.children[0].textContent.startsWith('Valid shown'));
+    assert.ok(display);assert.equal(rows.some(r=>/Valid stored|coverage|relative to DEM|shared cells/.test(r.children[0].textContent)),false);
     const valid=values.filter(Number.isFinite).length;
-    assert.equal(shared.children[1].textContent,`${valid} / 4`);
-    assert.match(shared.children[1].title,/comparison grid/i);
-    assert.match(shared.children[1].title,/not native/i);
-    assert.doesNotMatch(shared.children[1].innerHTML||'',/meter|150\.0%/);
-    const validRow=rows.find(r=>r.children[0].textContent.startsWith('valid'));
-    assert.match(validRow.children[1].innerHTML,new RegExp(`<b>${valid*25}\\.0%<`));
+    assert.match(ctx.$('iShownValidity').innerHTML,new RegExp('<b>'+valid*25+'\\.0%</b> @ 3 m.*'+valid+' / 4','s'));
+    assert.equal(ctx.P.arrays[ctx.primKey].comparisonTemporary,true);
+    assert.equal(ctx.P.arrays[ctx.primKey].valid,valid,'legacy result-grid alias remains numeric');
+    assert.equal(ctx.P.arrays[ctx.primKey].total,4);
+    assert.equal(ctx.P.arrays[ctx.primKey].display_valid,valid);
   }
-  ctx.openLayer('dem');
-  assert.equal(JSON.stringify(ctx.$('iBody').rows),originalRows);
+  ctx.openLayer('dem');assert.equal(JSON.stringify(ctx.$('iBody').rows),originalRows);
   assert.equal(ctx.$('rangeStateLabel').textContent,originalRange);
+});
+
+test('legacy templates keep finite result-grid aliases and accurately label A/B result availability',()=>{
+  for(const label of ['coverage','valid-cell count relative to DEM']){
+    const {ctx,api}=bridgeHarness(),row={children:[{textContent:label},{}]};
+    ctx.$('iBody').querySelectorAll=()=>[row];
+    api.show(comparison({id:'a',values:new Float32Array([0,1,2,NaN])}));
+    const L=ctx.P.arrays[ctx.primKey];
+    assert.equal(100*L.valid/L.total,75,'old Info arithmetic stays finite');
+    assert.equal(row.children[0].textContent,'result cells');
+    assert.equal(row.children[1].textContent,'3 / 4');
+    assert.match(row.children[1].title,/selected.*result/i);
+    assert.doesNotMatch(row.children[1].title,/shared finite/);
+  }
+});
+
+test('mask mode and passing cutoff leave display validity on the original packed fraction grid',()=>{
+  const {ctx,api}=bridgeHarness({info:true});
+  ctx.P.arrays.mask={...ctx.P.arrays.dem,leaf:'coherence_mask',bits:8,lo:0,hi:254,b64:Buffer.from([1,2,3,0]).toString('base64')};
+  ctx.values.mask=new Float32Array([0,.2,.8,NaN]);ctx.openLayer('mask');
+  const original=JSON.stringify(ctx.$('iBody').rows),shown=ctx.$('iShownValidity').innerHTML;
+  for(const cutoff of [0,.5,1]){api.setMaskOptions('mask',{mode:'binary',cutoff});assert.equal(JSON.stringify(ctx.$('iBody').rows),original);assert.equal(ctx.$('iShownValidity').innerHTML,shown);}
+  api.setMaskOptions('mask',{mode:'average',cutoff:.5});assert.equal(JSON.stringify(ctx.$('iBody').rows),original);
 });
 
 test('temporary legend preserves comparison percentile provenance through tab return and range edits',()=>{
@@ -148,20 +266,6 @@ test('zero-centred differences keep symmetric effective limits through native le
     api.show(comparison({id,zeroCentered:id!=='difference',lo:-4,hi:2}));
     const a=api.appearance(id);assert.deepEqual([a.lo,a.hi],[-4,2]);assert.equal(a.zeroCentered,false);
   }
-});
-
-test('temporary count correction supports the coverage label in already-built explorers',()=>{
-  const {ctx,api}=bridgeHarness({info:true}),renderInfo=ctx.renderInfo;
-  ctx.renderInfo=k=>{
-    renderInfo(k);
-    ctx.$('iBody').rows.find(r=>r.children[0].textContent==='valid-cell count relative to DEM').children[0].textContent='coverage';
-  };
-  api.show(comparison());
-  const rows=ctx.$('iBody').rows;
-  assert.equal(rows.find(r=>r.children[0].textContent==='shared cells').children[1].textContent,'3 / 4');
-  assert.equal(rows.some(r=>r.children[0].textContent==='coverage'),false);
-  ctx.openLayer('dem');
-  assert.ok(ctx.$('iBody').rows.some(r=>r.children[0].textContent==='coverage'));
 });
 
 test('a comparison with no shared finite cells leaves original Info and legend intact',()=>{

@@ -20,8 +20,8 @@ const $=id=>{if(!ids.has(id))ids.set(id,element());return ids.get(id);};
 const presets=element(),buttons=['full','robust','detail'].map(stretch=>({...element(),dataset:{stretch}}));
 const PREF={ranges:{},rangeModes:{},palettes:{},reverse:{},customs:{},typeActive:{},savedPalettes:{}};
 const scope=vm.createContext({$,PREF,document:{createElement:element},console,atob,
-  P:{arrays:{},tree:[]},G:{full:[1,1],dem_valid_fraction:.5},W:101,H:1,DEM:'dem',
-  levels:[{w:101,h:1,cell:3}],curLevel:0,glOn:true,
+  P:{arrays:{},tree:[]},G:{full:[1,1],res_m:3,cell_m:3,origin:[0,0],pixel:[3,-3],dem_valid_fraction:.5},W:101,H:1,DEM:'dem',
+  levels:[{w:101,h:1,cell:3}],curLevel:0,glOn:true,elev:new Float32Array(101).fill(100),
   nodeAt:p=>scope.P.tree.find(n=>n.path===p),
   DOM:{lidar:{c:'teal',n:'Lidar'},meta:{c:'gray',n:'Metadata'},amp:{c:'gold',n:'Amplitude'}},
   bVal:{},bVal2:{},U:new Proxy({},{get:(_,k)=>k}),
@@ -33,7 +33,7 @@ const run=source=>vm.runInContext(source,scope);
 run(extract('const NODATA=','/* ================= gl'));
 run(extract('const CM=','const hexRgb='));
 run(extract('function setPrimary(k,','/* ================= info card'));
-run(extract('const kvRow=','/* ================= render'));
+run(extract('const kvRow=','/* ================= validity help')); // Help controller has its own interaction checks.
 run(extract('function syncLegendEditor(){','window.addEventListener("keydown",e=>{'));
 run(extract('const tabs=[','/* ================= tree'));
 run(extract('function matches(n){','function renderTree(){'));
@@ -95,26 +95,29 @@ assert.deepEqual(Array.from(run('sampledPercentiles("strided",.02,.98)')),[0,0],
   'regular stride samples even cells, not all original colour-grid values');
 scope.W=101;run('cache.clear()');
 
-// Shared six-cell archive grid: equal counts do not establish overlap.
-// The numeric text must retain 150%, although the existing meter is capped.
-const dem=[1,1,0,0,0,0];scope.G={full:[1,6],dem_valid_fraction:2/6};
-for(const [name,support,want] of [
-  ['identical',dem,'100.0%'],['disjoint',[0,0,1,1,0,0],'100.0%'],
-  ['partial',[0,1,1,0,0,0],'100.0%'],['larger',[0,0,1,1,1,0],'150.0%'],
-  ['smaller',[1,0,0,0,0,0],'50.0%']]){
-  scope.P.arrays.support=layer(support,{total:6});run('renderInfo("support")');
-  const row=$('iBody').innerHTML.match(/valid-cell count relative to DEM<\/td><td class='v'><b>(.*?)<\/b>/);
-  assert(row,'count-ratio label for '+name);assert.equal(row[1],want,name);
-}
+// Stored archive support and exported support use their own grid totals.
+// The old DEM denominator must not affect either count.
+scope.G={full:[1,8],res_m:3,cell_m:3,origin:[0,0],pixel:[3,-3],dem_valid_fraction:.125};
+scope.W=2;scope.H=1;scope.levels=[{w:2,h:1,cell:3}];scope.elev=new Float32Array(2).fill(100);
+scope.P.arrays.support=layer([1,0],{valid:1,total:8,cell_m:6});
+run('renderInfo("support")');
+assert.match($('iBody').innerHTML,/Valid stored[^<]*<button[^>]*>i<\/button><\/td><td class='v'><b>12\.5%<\/b> @ 3 m<br><small>1 \/ 8/);
+assert.match($('iBody').innerHTML,/Valid shown/);
+assert.match($('iShownValidity').innerHTML,/<b>100\.0%<\/b> @ 3 m<br><small>2 \/ 2/);
+assert.match(run('validityRows(P.arrays.support)'),/Valid display.*<b>50\.0%<\/b> @ 6 m<br><small>1 \/ 2/s);
+const originalInfo=$('iBody').innerHTML;
 scope.G.dem_valid_fraction=0;run('renderInfo("support")');
-assert.match($('iBody').innerHTML,/relative to DEM<\/td><td class='v'><b>—/,'missing DEM denominator stays unavailable');
+assert.equal($('iBody').innerHTML,originalInfo,'counts are independent of DEM support');
+assert.doesNotMatch(originalInfo,/relative to DEM|coverage|shared cells/);
 run('setInfo(false)');assert.equal($('info').style.display,'none');$('reopen').onclick();assert.equal($('info').style.display,'');
 
 let total=0,sites=0;
 for(const file of fs.readdirSync(path.join(root,'viewer')).filter(f=>f.endsWith('_explorer.html'))){
   const page=fs.readFileSync(path.join(root,'viewer',file),'utf8');
   scope.P=JSON.parse(page.match(/<script id="payload" type="application\/json">([\s\S]*?)<\/script>/)[1]);
-  scope.G=scope.P.grid;
+  scope.G=scope.P.grid;scope.W=scope.G.w;scope.H=scope.G.h;
+  scope.levels=[{w:scope.W,h:scope.H,cell:scope.G.cell_m}];scope.curLevel=0;
+  run('cache.clear()');scope.elev=run('decodeAt({...P.terrain,w:W,h:H})');
   for(const key of Object.keys(scope.P.arrays)){
     scope.key=key;run('renderInfo(key)');
     assert.equal($('iPath').textContent,key);
@@ -151,4 +154,4 @@ scope.unsafe='<x> & "quoted"';assert.equal(run('esc(unsafe)'), '&lt;x&gt; &amp; 
 const statics=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
 assert.equal(new Set(statics).size,statics.length,'unique static IDs');
 assert(!/\d+% of values/.test(html),'no retained-data percentage claims');
-console.log('PASS: '+total+' current info renders across '+sites+' sites; presets/custom/tied/constant/empty/strided/lifted/symmetric ranges, DEM count ratios, filters and pinned controllers (DOM/GL stubs; no browser QA).');
+console.log('PASS: '+total+' current info renders across '+sites+' sites; presets/custom/tied/constant/empty/strided/lifted/symmetric ranges, stored/shown validity, exported Details counts, filters and pinned controllers (DOM/GL stubs; no browser QA).');

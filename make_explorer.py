@@ -491,7 +491,8 @@ def build_site(site: str, path: Path, args, sites: list) -> tuple:
                     if not packed:
                         continue
                     key = f"{name} {suffix}"
-                    arrays[key] = {**packed, **native, "cmap": cmap,
+                    arrays[key] = {**packed, **native, "display_valid": packed["valid"],
+                                   "display_total": packed["total"], "cmap": cmap,
                                    "unit": unit, "source": name, "domain": dom,
                                    "cell_m": res * st,
                                    **describe(name, leaf, suffix)}
@@ -509,7 +510,8 @@ def build_site(site: str, path: Path, args, sites: list) -> tuple:
                            else block_mean(raw, st))
                 q = quantise(display, stretch=leaf in STRETCH_PERCENTILE)
                 if q:
-                    arrays[name] = {**q, **native,
+                    arrays[name] = {**q, **native, "display_valid": q["valid"],
+                                    "display_total": q["total"],
                                     "cmap": CMAP_BY_LEAF.get(leaf, "viridis"),
                                     "unit": display_unit(leaf, entry["attrs"]),
                                     "source": name, "domain": dom,

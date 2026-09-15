@@ -180,7 +180,8 @@
       }
       let binary='';for(let i=0;i<raw.length;i+=8192)binary+=String.fromCharCode(...raw.subarray(i,i+8192));
       P.arrays[k]={w:rg.w,h:rg.h,cell_m:rg.dx,lo,hi,bits:16,b64:btoa(binary),
-        valid,total:n,leaf:'comparison_'+identity,label:result.label,short:result.label,
+        // Result-grid aliases keep older templates' Info arithmetic compatible.
+        valid,total:n,comparisonTemporary:true,display_valid:valid,display_total:n,leaf:'comparison_'+identity,label:result.label,short:result.label,
         comparisonAngleKind:result.id==='difference'?0:result.mode==='degrees'?1:result.mode==='radians'?2:0,
         comparisonZeroCentered:result.id==='difference'&&result.zeroCentered===true&&!result.maskBinary&&!result.maskCategory,
         maskBinary:!!result.maskBinary,maskCategory:result.maskCategory,
@@ -226,8 +227,8 @@
       restoreKey=null;restoreOverlay=null;
     })
   };
-  // Keep original widgets and ordinary-layer metrics. Temporary comparisons use
-  // analysis-grid counts and exact comparison stretch provenance, not native DEM ratios.
+  // Keep original widgets and report exact comparison stretch provenance.
+  // The template reads the temporary result-grid counts above for Valid display.
   const originalSetPrimary=setPrimary;
   setPrimary=function(k,...args){
     const returned=originalSetPrimary.call(this,k,...args);
@@ -238,14 +239,17 @@
     if($('rangeStateLabel'))$('rangeStateLabel').textContent=appearance.rangeLabel;
     if($('rangeState'))$('rangeState').title=appearance.rangeLabel+
       '. Comparison display limits; out-of-range colours saturate. Data and statistics are unchanged.';
-    const body=$('iBody');
-    const row=body&&typeof body.querySelectorAll==='function'&&Array.from(body.querySelectorAll('tr'))
-      .find(r=>r.children[0]&&['coverage','valid-cell count relative to DEM'].includes(r.children[0].textContent.trim()));
-    if(row&&row.children[1]){
-      const L=P.arrays[k];
-      row.children[0].textContent='shared cells';
-      row.children[1].textContent=L.valid.toLocaleString()+' / '+L.total.toLocaleString();
-      row.children[1].title='Shared finite cells / all cells in the comparison grid; not native archive coverage.';
+    // Older templates retain their existing Info layout until template integration.
+    if(typeof validityRows!=='function'){
+      const body=$('iBody');
+      const row=body&&typeof body.querySelectorAll==='function'&&Array.from(body.querySelectorAll('tr'))
+        .find(r=>r.children[0]&&['coverage','valid-cell count relative to DEM'].includes(r.children[0].textContent.trim()));
+      if(row&&row.children[1]){
+        const L=P.arrays[k];
+        row.children[0].textContent='result cells';
+        row.children[1].textContent=L.valid.toLocaleString()+' / '+L.total.toLocaleString();
+        row.children[1].title='Finite cells in the selected result / all cells in the comparison grid; no stored archive dataset.';
+      }
     }
     return returned;
   };

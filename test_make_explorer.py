@@ -186,6 +186,19 @@ class AspectExportTests(unittest.TestCase):
         self.assertEqual(aggregation['method'], 'circular_mean_degrees')
         self.assertEqual(compact_metadata(payload)['layers'][aspect_path]['aggregation'], aggregation)
         self.assertNotIn('aggregation', arrays[scalar_path])
+        # Stored support and finite exported blocks are different measurements.
+        for key, expected in {
+            aspect_path: (5, 8),  # circular cancellation leaves one block undefined
+            scalar_path: (8, 8),  # averaging ignores the missing native samples
+            radar_path + ' ∠phase': (8, 8),
+            radar_path + ' |magnitude|': (8, 8),
+        }.items():
+            with self.subTest(key=key):
+                self.assertEqual(arrays[key].get('display_valid'), expected[0])
+                self.assertEqual(arrays[key].get('display_total'), expected[1])
+        self.assertEqual(arrays[scalar_path]['valid'], 28)
+        self.assertEqual(arrays[scalar_path]['total'], 32)
+
 
 
 if __name__ == "__main__":
