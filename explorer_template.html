@@ -701,16 +701,18 @@
              processing, divided by all cells in the stored archive rectangle at
              the stated grid spacing. Values may be measured, derived or interpolated.
              Missing or invalid count metadata is shown as unknown.</p>
-          <p><b>Valid shown</b> &mdash; samples with finite layer and terrain values
-             on the current rendering grid, divided by all sampled grid positions.
-             Its count and spacing update with the <b>shown</b> mesh detail. Zero is
-             valid, including a mask's zero state. This describes grid samples,
-             not visible screen pixels, viewport clipping or triangle counts.</p>
-          <p>Changing rendering detail samples the existing terrain-aligned array;
-             it does not average new blocks. Finer or coarser sampling can raise or
-             lower the percentage. Temporary comparisons have no stored archive
-             dataset: their shown count follows the selected A, B or difference
-             result, with differences requiring finite values from both inputs.</p>
+          <p><b>Valid shown</b> &mdash; its count and spacing follow the current
+             <b>shown</b> detail. In Smooth mode, it counts finite layer and terrain
+             samples. In Cells mode, it counts finite averaged blocks with a finite
+             terrain sample at the corresponding grid position. Both use all grid
+             positions as the denominator. Zero is valid, including a mask's zero state.</p>
+          <p>Cells averages valid exported values within each block at the selected
+             resolution. A partly missing block can still have an average, so its
+             validity may be higher than Smooth's sampled validity. Empty blocks stay
+             blank. Smooth changes detail by sampling; it does not average new blocks.</p>
+          <p>These counts are not visible screen pixels, viewport clipping or triangle
+             counts. Temporary comparisons have no stored archive dataset; their shown
+             count follows the selected result and colour mode.</p>
           <p><b>Valid display</b> in Details counts finite cells in the exported
              display grid before terrain mapping or rendering detail. Export block
              averaging can make this percentage higher than stored validity without
@@ -729,6 +731,13 @@
             <button data-d="wire" aria-pressed="true">Wireframe</button>
             <button data-d="solid" aria-pressed="false">Solid</button>
           </div></div>
+        <div class="grp"><div class="t">Cell colors</div>
+          <div class="seg" id="colorSeg" aria-label="Cell colors">
+            <button data-c="smooth" aria-pressed="true">Smooth</button>
+            <button data-c="cells" aria-pressed="false">Cells</button>
+          </div>
+          <div id="cellColorNote" style="font-size:10px;line-height:1.5;color:var(--ink-3);margin-top:6px">Smooth blends neighboring values.</div>
+        </div>
         <div class="grp"><div class="t">Detail <b id="lodV"></b></div>
           <div class="seg" id="lodSeg">
             <button data-l="auto" aria-pressed="true">Auto</button>
@@ -954,6 +963,7 @@ function decodeAt(L){
 /* Colour layers are stored coarser than the mesh -- the terrain is one array
    and can afford detail, 300 data layers cannot. Nearest-neighbour lifts each
    onto the render grid on demand. */
+function cellSamples(key){return decodeAt(P.arrays[key]);}
 function lift(src,L){
   const lw=L.w,lh=L.h,origin=L.origin||G.origin;
   const pixel=L.pixel||G.pixel.map(v=>v*L.cell_m/G.cell_m);
@@ -1015,6 +1025,9 @@ in float vVal; in float vVal2; in float vOk; in float vOk2; in vec3 vPos;
 in vec2 vDirection; in vec2 vDirection2;
 uniform highp int uAngleKind,uAngleKind2;
 uniform int uMaskBinary,uMaskBinary2;
+uniform int uCellColors;
+uniform highp sampler2D uCells,uCells2;
+uniform vec4 uCellMap,uCellMap2;
 uniform int uCmap,uCmap2,uReverse,uReverse2,uDiverging,uDiverging2;
 uniform float uLo,uHi,uLo2,uHi2,uOpacity;
 uniform int uCustomN,uCustomN2;
@@ -1106,23 +1119,49 @@ float maskClass(float value,int mode){
   if(mode==2)return clamp(floor(value+.5),-1.0,1.0);
   return value;
 }
+// Direct original-grid lookup: never blend neighboring cells or clamp cropped edges.
+bool readCell(highp sampler2D cells,vec4 cellMap,int angleKind,out float value){
+  ivec2 ij=ivec2(floor(vPos.xz*cellMap.xy+cellMap.zw));
+  if(any(lessThan(ij,ivec2(0)))||any(greaterThanEqual(ij,textureSize(cells,0))))return false;
+  value=texelFetch(cells,ij,0).r;
+  if(value<=-1e29||isnan(value)||isinf(value))return false;
+  if(angleKind==1)value=mod(value,360.0);
+  if(angleKind==2)value=mod(value+3.141592653589793,6.283185307179586)-3.141592653589793;
+  return true;
+}
 void main(){
-  if(vOk<.5) discard;
-  float value=vVal/vOk;
-  if(uAngleKind!=0 && !readAngle(vDirection,vOk,uAngleKind,value))discard;
+  float value;
+  if(uCellColors==1){
+    if(!readCell(uCells,uCellMap,uAngleKind,value))discard;
+  }else{
+    if(vOk<.5)discard;
+    value=vVal/vOk;
+    if(uAngleKind!=0 && !readAngle(vDirection,vOk,uAngleKind,value))discard;
+  }
   if(uAngleKind==0)value=maskClass(value,uMaskBinary);
   float t1=clamp(nrm(value,uLo,uHi,uDiverging),0.,1.);
   if(uReverse==1)t1=1.-t1;
   vec3 col=uCmap==10?customPrimary(t1):builtinPick(uCmap,t1);
-  if(uOpacity>.001 && vOk2>.5){
-    float value2=vVal2/vOk2;
-    if(uAngleKind2==0 || readAngle(vDirection2,vOk2,uAngleKind2,value2)){
+  if(uOpacity>.001){
+    float value2=0.0;
+    bool valid2;
+    if(uCellColors==1)valid2=readCell(uCells2,uCellMap2,uAngleKind2,value2);
+    else{
+      valid2=vOk2>.5;
+      if(valid2){
+        value2=vVal2/vOk2;
+        if(uAngleKind2!=0)valid2=readAngle(vDirection2,vOk2,uAngleKind2,value2);
+      }
+    }
+    if(valid2){
       if(uAngleKind2==0)value2=maskClass(value2,uMaskBinary2);
       float t2=clamp(nrm(value2,uLo2,uHi2,uDiverging2),0.,1.);
       if(uReverse2==1)t2=1.-t2;
       col=mix(col,uCmap2==10?customOverlay(t2):builtinPick(uCmap2,t2),uOpacity);
     }
   }
+  // Cells use the palette color itself. Overlay opacity remains intentional.
+  if(uCellColors==1){frag=vec4(col,1.0);return;}
   /* the wireframe carries the data colour too -- a grey cage tells you
      nothing about the layer you asked to see. Floored rather than brightened:
      a flat boost washes the ramp out to white at this line density. */
@@ -1142,6 +1181,7 @@ gl.useProgram(prog);
 const U={};["uMVP","uExag","uCmap","uCmap2","uReverse","uReverse2",
   "uAngleKind","uAngleKind2",
   "uMaskBinary","uMaskBinary2",
+  "uCellColors","uCells","uCells2","uCellMap","uCellMap2",
   "uDiverging","uDiverging2","uCustomN","uCustomN2",
   "uLo","uHi","uLo2","uHi2","uOpacity",
   "uSun","uRelief","uWire"].forEach(n=>U[n]=gl.getUniformLocation(prog,n));
@@ -1149,6 +1189,18 @@ U.uCustomColors=gl.getUniformLocation(prog,"uCustomColors[0]");
 U.uCustomColors2=gl.getUniformLocation(prog,"uCustomColors2[0]");
 U.uCustomStops=gl.getUniformLocation(prog,"uCustomStops[0]");
 U.uCustomStops2=gl.getUniformLocation(prog,"uCustomStops2[0]");
+// Complete textures also keep the unchanged Smooth branch valid on every GPU.
+const cellTextures=[0,1].map(unit=>{
+  const texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0+unit);
+  gl.bindTexture(gl.TEXTURE_2D,texture);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,1,1,0,gl.RED,gl.FLOAT,new Float32Array([NODATA]));
+  gl.uniform1i(unit?U.uCells2:U.uCells,unit);return texture;
+});
+const cellTextureLimit=gl.getParameter(gl.MAX_TEXTURE_SIZE);
 const vao=gl.createVertexArray(); gl.bindVertexArray(vao);
 const bPos=gl.createBuffer(),bVal=gl.createBuffer(),bVal2=gl.createBuffer();
 function bind(name,buf,size){const l=gl.getAttribLocation(prog,name);
@@ -1175,7 +1227,7 @@ function viewMat(eye){const b=basis(),x=b.x,y=b.y,z=b.z;
 
 /* ================= terrain ================= */
 const view={az:-0.62,el:0.58,dist:2.5,tx:0,ty:0};
-const opts={lod:"auto",disp:"wire",exag:2.5,sunAz:315,sunEl:42,relief:.60};
+const opts={lod:"auto",disp:"wire",colors:"smooth",exag:2.5,sunAz:315,sunEl:42,relief:.60};
 let elev=null,scale=1,eMin=0,spanX=0,spanZ=0,levels=[],curLevel=0,tris=0;
 
 function buildTerrain(){
@@ -1354,6 +1406,95 @@ function applyCustomUniforms(k,overlay){
   gl.uniform1fv(overlay?U.uCustomStops2:U.uCustomStops,pos);
   gl.uniform3fv(overlay?U.uCustomColors2:U.uCustomColors,col);
 }
+// Average decoded values over physical overlap, not colours or selected vertices.
+function averageCellValues(values,source,target,angleKind=0,category=0){
+  const out=new Float32Array(target.w*target.h).fill(NaN);
+  const axes=[0,1].map(axis=>{
+    const n=axis?target.h:target.w,limit=axis?source.h:source.w;
+    const d=target.pixel[axis],p=source.pixel[axis],offset=target.origin[axis]-source.origin[axis];
+    return Array.from({length:n},(_,i)=>{
+      const end=target.extent?Math.abs(target.extent[axis]):Infinity;
+      const a=(offset+Math.sign(d)*Math.min(Math.abs(i*d),end))/p;
+      const b=(offset+Math.sign(d)*Math.min(Math.abs((i+1)*d),end))/p;
+      const lo=Math.max(0,Math.min(a,b)),hi=Math.min(limit,Math.max(a,b));
+      return {lo,hi,start:Math.floor(lo),end:Math.ceil(hi)};
+    });
+  });
+  for(let row=0;row<target.h;row++)for(let col=0;col<target.w;col++){
+    const x=axes[0][col],y=axes[1][row];let sum=0,weight=0,sin=0,cos=0;
+    const votes=category===2?[0,0,0]:null;
+    for(let r=y.start;r<y.end;r++)for(let c=x.start;c<x.end;c++){
+      const v=values[r*source.w+c];if(!Number.isFinite(v)||v<=-1e29)continue;
+      const w=(Math.min(c+1,x.hi)-Math.max(c,x.lo))*(Math.min(r+1,y.hi)-Math.max(r,y.lo));
+      if(w<=0)continue;
+      if(category===2){if(v!==-1&&v!==0&&v!==1)continue;votes[v+1]+=w;}
+      else if(category===1){if(v!==0&&v!==1)continue;sum+=w*v;}
+      else if(angleKind){const a=angleKind===1?v*Math.PI/180:v;sin+=w*Math.sin(a);cos+=w*Math.cos(a);}
+      else sum+=w*v;
+      weight+=w;
+    }
+    if(!weight)continue;
+    let value;
+    if(category===2){
+      const best=Math.max(...votes),winners=votes.map((v,i)=>best-v<=1e-10*weight?i:-1).filter(i=>i>=0);
+      if(winners.length!==1)continue;value=winners[0]-1;
+    }else if(category===1)value=sum/weight>=.5?1:0;
+    else if(angleKind){
+      if(Math.hypot(sin,cos)<=1e-6*weight)continue;
+      value=Math.atan2(sin,cos);
+      if(angleKind===1){value=(value*180/Math.PI+360)%360;if(value>=359.999999)value=0;}
+      else if(value>=Math.PI)value-=2*Math.PI;
+    }else value=sum/weight;
+    out[row*target.w+col]=value;
+  }
+  return out;
+}
+const cellGridCache=new Map();
+const cellRendered=[null,null];let cellColorLevel=-1;
+function finishCellValues(key,values){return values;}
+function cellDisplayGrid(key,level){
+  const L=P.arrays[key],lv=levels[level],stride=1<<level;
+  const grid={w:lv.w,h:lv.h,cell_m:lv.cell,origin:G.origin,pixel:G.pixel.map(v=>v*stride),
+    extent:[W*G.pixel[0],H*G.pixel[1]],key,level};
+  const id=key+"|"+level;let cached=cellGridCache.get(id);
+  if(!cached||cached.layer!==L){
+    const source={...L,origin:L.origin||G.origin,pixel:L.pixel||G.pixel.map(v=>v*L.cell_m/G.cell_m)};
+    const category=L.maskCategory==="transition"?2:L.maskBinary?1:0;
+    cached={layer:L,values:averageCellValues(cellSamples(key),source,grid,angularKind(key),category)};
+    if(cellGridCache.size>=8)cellGridCache.delete(cellGridCache.keys().next().value);
+    cellGridCache.set(id,cached);
+  }
+  grid.values=finishCellValues(key,cached.values);return grid;
+}
+function cellGridMap(L){
+  const origin=L.origin||G.origin,pixel=L.pixel||G.pixel.map(v=>v*L.cell_m/G.cell_m);
+  // Subtract projected origins on the CPU; GPU coordinates stay small and precise.
+  return [G.pixel[0]/(G.cell_m*scale*pixel[0]),G.pixel[1]/(G.cell_m*scale*pixel[1]),
+    (G.origin[0]-origin[0]+W*.5*G.pixel[0])/pixel[0],
+    (G.origin[1]-origin[1]+H*.5*G.pixel[1])/pixel[1]];
+}
+function syncCellColors(){
+  let on=opts.colors==="cells",limited=false;
+  const lv=levels[curLevel];
+  if(on&&lv&&(lv.w>cellTextureLimit||lv.h>cellTextureLimit)){
+    opts.colors="smooth";on=false;limited=true;
+  }
+  cellRendered.fill(null);
+  if(on&&lv)for(const [key,unit] of [[primKey,0],[ovKey,1]]){
+    if(!key||!P.arrays[key])continue;
+    const grid=cellDisplayGrid(key,curLevel);cellRendered[unit]=grid;
+    gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,cellTextures[unit]);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,grid.w,grid.h,0,gl.RED,gl.FLOAT,grid.values);
+    gl.uniform4fv(unit?U.uCellMap2:U.uCellMap,cellGridMap(grid));
+  }
+  cellColorLevel=curLevel;
+  gl.uniform1i(U.uCellColors,on?1:0);
+  $("colorSeg").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.c===opts.colors)));
+  for(const id of ["sunAz","sunEl","relief"])$(id).disabled=on;
+  $("cellColorNote").textContent=limited?"Cells unavailable: this grid exceeds this device's texture limit.":on&&lv?
+    "One averaged color per "+lv.cell.toLocaleString()+" m block. Updates with Detail; overlay opacity still applies.":"Smooth blends neighboring values.";
+  syncShownResolution();
+}
 function setPrimary(k,syncEditor=true){
   if(!P.arrays[k])return;
   primKey=k; const L=P.arrays[k], d=DOM[L.domain]||DOM.meta;
@@ -1386,6 +1527,7 @@ function setPrimary(k,syncEditor=true){
     $("t2").textContent=fmt(hi);}
   syncRangeStatus(k);
   renderInfo(k);
+  syncCellColors();
   syncPaletteSettings();
   if(syncEditor)syncLegendEditor();
   draw();
@@ -1393,7 +1535,7 @@ function setPrimary(k,syncEditor=true){
 function setOverlay(k){
   const on=k&&k!=="__none__"; ovKey=on?k:null;
   $("op").disabled=!on;
-  if(!on){gl.uniform1f(U.uOpacity,0);gl.uniform1i(U.uAngleKind2,0);gl.uniform1i(U.uMaskBinary2,0);syncPaletteSettings();draw();return;}
+  if(!on){gl.uniform1f(U.uOpacity,0);gl.uniform1i(U.uAngleKind2,0);gl.uniform1i(U.uMaskBinary2,0);syncCellColors();syncPaletteSettings();draw();return;}
   const L=P.arrays[k];
   const cmap=layerCmap(k);
   const [lo,hi]=layerRange(k);
@@ -1407,6 +1549,7 @@ function setOverlay(k){
   applyCustomUniforms(k,true);
   gl.uniform1f(U.uLo2,lo);gl.uniform1f(U.uHi2,hi);
   gl.uniform1f(U.uOpacity,+$("op").value/100);
+  syncCellColors();
   syncPaletteSettings();
   draw();
 }
@@ -1448,22 +1591,23 @@ function validityRows(L,help=false){
 }
 const shownValidityCache=new WeakMap();
 let shownInfoKey=null;
-function shownCounts(values,terrain,level){
+function shownCounts(values,terrain,level,blocks=false){
   const lv=levels[level];
-  if(!values||!terrain||!lv||values.length!==W*H||terrain.length!==W*H)return null;
+  if(!values||!terrain||!lv||values.length!==(blocks?lv.w*lv.h:W*H)||terrain.length!==W*H)return null;
   let cached=shownValidityCache.get(values);
   if(!cached||cached.terrain!==terrain){
     cached={terrain,levels:new Map()};shownValidityCache.set(values,cached);
   }
-  if(!cached.levels.has(level)){
+  const cacheKey=level*2+(blocks?1:0);
+  if(!cached.levels.has(cacheKey)){
     const stride=1<<level;let valid=0;
     for(let row=0;row<lv.h;row++)for(let col=0;col<lv.w;col++){
       const i=row*stride*W+col*stride;
-      if(Number.isFinite(values[i])&&Number.isFinite(terrain[i]))valid++;
+      if(Number.isFinite(values[blocks?row*lv.w+col:i])&&Number.isFinite(terrain[i]))valid++;
     }
-    cached.levels.set(level,cellCounts(valid,lv.w*lv.h));
+    cached.levels.set(cacheKey,cellCounts(valid,lv.w*lv.h));
   }
-  return cached.levels.get(level);
+  return cached.levels.get(cacheKey);
 }
 let infoOpen=true;
 let shownInfoLevel=-1;
@@ -1473,9 +1617,12 @@ function syncShownResolution(){
   out.title="Current rendered terrain detail";
   const shown=$("iShownValidity");
   if(shown){
-    const counts=shownInfoKey&&P.arrays[shownInfoKey]?shownCounts(floats(shownInfoKey),elev,curLevel):null;
+    const cells=opts.colors==="cells",grid=cellRendered[0];
+    const counts=cells?(grid&&grid.key===shownInfoKey&&grid.level===curLevel?shownCounts(grid.values,elev,curLevel,true):null):
+      shownInfoKey&&P.arrays[shownInfoKey]?shownCounts(floats(shownInfoKey),elev,curLevel):null;
     shown.innerHTML=validityValue(counts,lv.cell);
-    shown.title="Finite layer and terrain values at the current rendering-grid samples / all sampled grid positions; not visible pixels or viewport coverage.";
+    shown.title=cells?"Finite averaged blocks with a finite corresponding terrain-grid sample / all blocks; not visible pixels or viewport coverage.":
+      "Finite layer and terrain values at the current rendering-grid samples / all sampled grid positions; not visible pixels or viewport coverage.";
   }
 }
 function renderInfo(k){
@@ -1558,6 +1705,7 @@ function draw(){
   while(!levels[curLevel]&&curLevel>0)curLevel--;
   const lv=levels[curLevel];
   if(!lv)return;
+  if(opts.colors==="cells"&&cellColorLevel!==curLevel)syncCellColors();
   if(shownInfoLevel!==curLevel){shownInfoLevel=curLevel;syncShownResolution();}
 
   const b=basis();
@@ -1616,11 +1764,16 @@ function probeAt(px,py){
         const h2=sampleH(q[0],q[2]);
         if(isNaN(h2)||q[1]>h2)lo=m;else hi=m;}
       const q=[eye[0]+dir[0]*hi,eye[1]+dir[1]*hi,eye[2]+dir[2]*hi];
-      return {i:Math.round((q[0]/scale+spanX/2)/G.cell_m),
+      return {x:q[0],z:q[2],i:Math.round((q[0]/scale+spanX/2)/G.cell_m),
               j:Math.round((q[2]/scale+spanZ/2)/G.cell_m)};
     }
   }
   return null;
+}
+function cellProbeValue(unit,hit){
+  const grid=cellRendered[unit];if(!grid)return NaN;
+  const map=cellGridMap(grid),col=Math.floor(hit.x*map[0]+map[2]),row=Math.floor(hit.z*map[1]+map[3]);
+  return col>=0&&row>=0&&col<grid.w&&row<grid.h?grid.values[row*grid.w+col]:NaN;
 }
 function showProbe(ev){
   const el=$("probe");
@@ -1629,13 +1782,14 @@ function showProbe(ev){
   if(!hit||hit.i<0||hit.j<0||hit.i>=W||hit.j>=H){el.style.display="none";return;}
   const idx=hit.j*W+hit.i, e=elev[idx];
   if(isNaN(e)){el.style.display="none";return;}
-  const L=P.arrays[primKey], v=floats(primKey)[idx];
+  const L=P.arrays[primKey], cells=opts.colors==="cells",v=cells?cellProbeValue(0,hit):floats(primKey)[idx];
   const east=G.origin[0]+G.pixel[0]*(hit.i+0.5);
   const north=G.origin[1]+G.pixel[1]*(hit.j+0.5);
   let html="<b>"+esc(L.label)+"</b> "+(isNaN(v)?"<span class='u'>no data</span>"
     :fmt(v)+(L.unit?" "+esc(L.unit):""));
+  if(cells)html+="<br><span class='u'>Block value @ "+levels[curLevel].cell.toFixed(0)+" m</span>";
   if(L.leaf!=="elevation") html+="<br>elev "+fmt(e)+" m";
-  if(ovKey){const L2=P.arrays[ovKey],v2=floats(ovKey)[idx];
+  if(ovKey){const L2=P.arrays[ovKey],v2=cells?cellProbeValue(1,hit):floats(ovKey)[idx];
     html+="<br>"+esc(L2.label)+" "+(isNaN(v2)?"no data"
       :fmt(v2)+(L2.unit?" "+esc(L2.unit):""));}
   html+="<br><span class='u'>"+east.toFixed(0)+" E&nbsp; "+north.toFixed(0)+" N</span>";
@@ -2724,6 +2878,7 @@ function setDisp(v){opts.disp=v;
   $("dispSeg").querySelectorAll("button").forEach(b=>
     b.setAttribute("aria-pressed",b.dataset.d===v?"true":"false"));draw();}
 seg("dispSeg","d",setDisp);
+seg("colorSeg","c",v=>{opts.colors=v;syncCellColors();draw();});
 
 /* overlay list, grouped by domain */
 (function fillOv(){

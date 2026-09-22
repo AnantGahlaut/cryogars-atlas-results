@@ -7,6 +7,7 @@ import unittest
 
 import h5py
 import numpy as np
+from pyproj import CRS
 
 import build_hdf5 as B
 import enrich_hdf5 as E
@@ -38,6 +39,7 @@ def identify(h5):
     ident.attrs.update({
         "common_grid_resolution_m": 3.0,
         "common_crs_epsg": 6340,
+        "common_crs_wkt": CRS.from_epsg(6340).to_wkt(),
         "common_grid_transform": [3.0, 0.0, 600000.0, 0.0, -3.0, 4940000.0],
         "common_grid_shape": SHAPE,
         "chunk_edge_px": 16,

@@ -1,9 +1,15 @@
 # Product-notes installation record
 
-The dated entries below record historical stages. Current source also includes
-integrated coherence-mask controls and renderer changes, and review copies have
-been validated. Production rollout and the coordinated scientific rebuild remain
-on hold. These source and review-copy updates do not describe the live viewer.
+The dated entries below record historical stages. **Current local status,
+2026-09-21:** all eight explorers were rebuilt and installed with the current
+product notes, adjustable coherence-mask controls, Cells averaging and live
+validity explanations. All 1,664 active notes passed the rebuild checks. See the
+[rebuild record](reviews/2026-09-21-explorer-rebuild.md).
+
+Archive repairs remain deferred; the source/read-only display rebuild did not
+modify HDF5 values or metadata. Public deployment is a separate operation and
+is not established by local installation. Earlier entries below preserve what
+was installed, staged or held on their own dates.
 
 Backup, candidate and manifest paths below are local evidence records relative
 to the project root. They are excluded from the source repository.

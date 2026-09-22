@@ -1,17 +1,21 @@
 # v1.0.05 release checklist
 
-**Status: private development repository; public release pending.** The author
-approved creating and pushing source to the private repository. No public tag,
-release, demo, or archive distribution is authorized by that initial push.
+**Status reviewed: 2026-09-22.** GitHub confirms that the source repository is
+public; a separate public research viewer also exists. All eight local explorers were rebuilt
+and validated on September 21. That bundle was published on September 22; all
+nine public pages matched their prepared SHA-256 hashes. See the
+[publication record](reviews/2026-09-22-public-viewer-update.md).
+Archive repairs, archive distribution and the final scientific release remain
+pending. Viewer publication does not change the source-repository visibility.
 
 Release label: **v1.0.05**, with `05` denoting the fifth enrichment cycle.
 Author: **Anant Gahlaut**. Destination organization:
 [CryoGARS](https://github.com/cryogars), as a later transfer target. The current
-private repository is
+public source repository is
 [AnantGahlaut/cryogars-atlas](https://github.com/AnantGahlaut/cryogars-atlas).
 Organization access and transfer remain separate steps.
 
-## Completed in this documentation pass
+## Historical documentation preparation — 2026-09-08
 
 - [x] Rewrite the README around purpose, capabilities, site coverage, and entry points.
 - [x] Read all eight current viewer payloads for site counts and recorded versions.
@@ -24,15 +28,27 @@ Organization access and transfer remain separate steps.
 - [x] Compile the 17 JavaScript blocks in the eight explorers and entrance.
 - [x] Preserve and hash-check backups of the previous README and checklist.
 
-## Decide before repository integration
+## Current local explorer completion — 2026-09-21
+
+- [x] Re-export and install all eight sites and the index from read-only archives.
+- [x] Include current notes, Cells averaging, validity guidance and labels/dates/units.
+- [x] Run 390 Python tests, all 1,664 layer/note checks and 856 native-block samples.
+- [x] Complete SNEX-026 source/audit metadata fixes without exempting old archives.
+- [x] Preserve the Grand Mesa source-description correction with separate provenance.
+- [x] Publish the current viewer bundle and verify all nine hosted page hashes.
+
+See the [rebuild record](reviews/2026-09-21-explorer-rebuild.md) for evidence and
+remaining scope. The archive files themselves were not repaired.
+
+## Decide before final source/release integration
 
 - [x] Choose the initial private repository: `AnantGahlaut/cryogars-atlas`.
 - [ ] Arrange any later CryoGARS transfer, preserving project history.
 - [ ] Choose a code license and confirm additional contributors and acknowledgements.
 - [ ] Add `LICENSE` and complete `CITATION.cff` with the final repository URL and
       contributor metadata; do not invent a DOI, funding award, or ORCID.
-- [ ] Decide whether the public release is source-only, includes a viewer bundle,
-      or also links to a separately hosted full-resolution archive.
+- [x] Distribute the browser viewer separately from the source repository.
+- [ ] Decide final source-release scope and separate full-resolution archive hosting.
 - [ ] Confirm attribution and redistribution requirements for the selected
       datasets and derived demo layers. Current explorers omit in-situ points.
 - [ ] Review the draft README and final release scope with the author.
@@ -46,8 +62,8 @@ Organization access and transfer remain separate steps.
 - [ ] Correct or explicitly exclude the current aspect product from quantitative use.
 - [x] Resolve the canopy-window choice (SNEX-006): retain the centered calculation
       and describe 11 × 11 cells / 33 × 33 m support; source/docs corrected.
-- [ ] Propagate the SNEX-006 description and explicit nominal/effective window
-      metadata to backed-up archives and the coordinated explorer export.
+- [x] Install the SNEX-006 effective-window explanation in all local explorers.
+- [ ] Propagate explicit nominal/effective window metadata to backed-up archives.
 - [x] Resolve derivative input stage (SNEX-007): new source uses the cleaned
       stored bases and records input-stage lineage; current cleaning retained.
 - [ ] Regenerate affected terrain/canopy/incidence layers and projection-DEM
@@ -58,31 +74,32 @@ Organization access and transfer remain separate steps.
       and coordinated exports, preserving historical whole-grid metadata.
 - [ ] Review approximate incidence geometry separately (remaining SNEX-008).
 - [ ] Resolve inherited provenance statements that conflict with filtering/clipping.
-- [ ] Record source commit, parameters, source-product versions, and environment for
-      newly generated release artifacts; preserve historical provenance honestly.
+- [x] Implement forward source/parameter/environment provenance and record it for
+      the fresh display exports; preserve historical uncertainty.
+- [ ] Verify complete provenance for regenerated scientific archives at release.
 - [ ] Verify and hash the actual archives selected for distribution after writers stop.
       This documentation pass did not reread or rehash the large HDF5 files.
-- [ ] Make manifest verification fail for missing expected files and handle extra
-      files explicitly; stabilize object/string serialization before using deep
-      dataset hashes. Existing per-file SHA-256 hashes remain byte-integrity checks.
+- [x] Make manifest verification fail missing/extra files and ambiguous names; use
+      versioned stable dataset serialization, rejecting unsupported dtypes.
+      Existing per-file SHA-256 hashes remain byte-integrity checks.
 
 ## Reproducibility and interaction
 
 - [ ] Create a fresh environment from `environment.yml` and run the offline suites.
       The current pass validates an existing environment, not installation from scratch.
-- [ ] Repair or retire stale `ui_preview/check_workspace.js`; it refers to a function
-      absent from the current explorer template.
+- [x] Repair `ui_preview/check_workspace.js` and validate current Info/validity behavior.
 - [ ] Add portable automated checks in the selected repository. Separate checks
       requiring generated viewer pages from tests using synthetic source fixtures.
 - [ ] Audit colours, legends, and saved palette copies against one palette definition.
 - [ ] Have the author review palette controls, persistence, overlays, layer switching,
       automatic detail, keyboard access, and small-screen behaviour in a browser.
-- [ ] Verify the eventual hosted demo and downloads after a deployment is authorized.
+- [x] Verify the updated hosted viewer by HTTP and complete page hashes; final
+      scientific archive downloads remain a separate release.
 
 ## Prepare the exact publishable contents
 
 - [ ] Prepare and review the exact public release checkout. The working folder
-      now has Git initialized with the private repository as `origin`.
+      has Git initialized with the public source repository as `origin`.
 - [ ] Include core source, templates, public docs, tests, environment, and logo.
 - [ ] Retain `ui_preview/logo_notes_addon.html` and `ui_preview/check_preview.js`:
       production rendering and refresh still depend on those paths.
@@ -96,8 +113,9 @@ Organization access and transfer remain separate steps.
 - [ ] Scan the selected contents for credentials, local paths, private notes,
       oversized files, and unintended embedded source metadata.
 - [ ] Replace draft distribution/license statements with finalized information.
-- [ ] Publish only after the author's explicit go-ahead, then verify the repository,
-      release label, files, citations, and any demo links.
+- [x] Verify the authorized viewer publication against the exact selected bundle.
+- [ ] Obtain final scope decisions for any later public source/scientific archive
+      release, then verify its files, version, citations and download links.
 
 The `.gitignore` is a preparation aid, not a substitute for inspecting the exact
 files committed. Keep the full-resolution archive on its designated data host;

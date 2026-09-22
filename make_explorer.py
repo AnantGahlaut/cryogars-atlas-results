@@ -37,7 +37,9 @@ from datetime import datetime
 from pathlib import Path
 from build_provenance import capture_sources, file_identity, new_record, read_lineage
 
-_EXPORT_SOURCES = capture_sources(__file__)
+from viewer_metadata_corrections import apply_viewer_metadata_corrections
+
+_EXPORT_SOURCES = capture_sources(__file__, Path(__file__).with_name("viewer_metadata_corrections.py"))
 
 warnings.filterwarnings("ignore")
 
@@ -529,6 +531,8 @@ def build_site(site: str, path: Path, args, sites: list) -> tuple:
         tree.extend(derived)
         tree.sort(key=lambda t: t["path"])
 
+    metadata_corrections = apply_viewer_metadata_corrections(
+        {'site': site, 'identification': ident, 'tree': tree})
     export_lineage = new_record('explorer_data_export', _EXPORT_SOURCES,
         {'site': site, 'terrain_stride': fine, 'data_stride': coarse,
          'with_insitu': bool(getattr(args, 'with_insitu', False)),
@@ -537,7 +541,7 @@ def build_site(site: str, path: Path, args, sites: list) -> tuple:
          'stretch_percentiles': [2, 98], 'stretch_leaves': sorted(STRETCH_PERCENTILE),
          'aspect_resultant_tolerance': ASPECT_RESULTANT_TOLERANCE,
          'complex_phase_aggregation': 'argument_of_complex_mean',
-         'roster': sites,
+         'roster': sites, 'metadata_corrections': metadata_corrections,
          'input_status': 'unchanged_size_mtime' if input_file == file_identity(path) else 'changed_during_export'},
         inputs=[{'dataset_paths': sorted({item['source'] for item in arrays.values()}),
                  'dataset_lineage_location': 'payload.tree[].attrs'}],

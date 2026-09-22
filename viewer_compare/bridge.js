@@ -1,6 +1,6 @@
 /* Executed inside the existing viewer closure. All changes are in-memory only. */
 {
-  const temporary=new Map(), originalFloats=floats, originalSavePrefs=savePrefs;
+  const temporary=new Map(), temporaryCells=new Map(), originalFloats=floats, originalSavePrefs=savePrefs;
   let restoreKey=null, restoreOverlay=null, lastShown=null;
   const instance=Date.now().toString(36);
   let generation=0;
@@ -32,7 +32,10 @@
       $('legDom').textContent='InSAR · '+(options.mode==='binary'?'0–1 block state':'passing fraction');
       $('rangeStateLabel').textContent=options.mode==='binary'?'0–1 · fraction ≥ '+options.cutoff:
         'Average · '+$('rangeStateLabel').textContent;
-      $('rangeState').title=options.mode==='binary'?'1 when the decoded valid-cell passing fraction is at least '+options.cutoff+'. Missing blocks remain blank.':
+      const coarse=typeof opts!=='undefined'&&opts.colors==='cells';
+      const quantity=coarse?'area-weighted mean of exported passing fractions':'decoded valid-cell passing fraction';
+      $('rangeState').title=options.mode==='binary'?'1 when the '+quantity+' is at least '+options.cutoff+'. Missing blocks remain blank.':
+        coarse?'Area-weighted mean of exported passing fractions within each current Detail block.':
         'Passing fraction among valid cells in each exported block. '+$('rangeState').title;
     }
     if(category(k)&&window.SnowCompareExport){
@@ -95,6 +98,28 @@
     if(maskCache.size>=14)maskCache.delete(maskCache.keys().next().value);
     maskCache.set(k,{source,...options,values});return values;
   };
+  // Average original exported fractions before classifying a coarse Cells block.
+  // Keep the earlier, unaggregated Cells template compatible with this add-on.
+  const averagesCells=typeof finishCellValues==='function';
+  if(typeof cellSamples==='function'){
+    const originalCellSamples=cellSamples;
+    cellSamples=function(k){
+      if(temporaryCells.has(k))return temporaryCells.get(k);
+      const source=originalCellSamples(k);
+      return !averagesCells&&isMask(k)&&window.SnowCompareCore?window.SnowCompareCore.maskPreview(source,maskOptions(k)):source;
+    };
+  }
+  if(averagesCells){
+    const originalFinishCellValues=finishCellValues;
+    finishCellValues=function(k,values){
+      return isMask(k)&&window.SnowCompareCore?window.SnowCompareCore.maskPreview(values,maskOptions(k)):
+        originalFinishCellValues(k,values);
+    };
+  }
+  if(typeof syncCellColors==='function'){
+    const originalSyncCellColors=syncCellColors;
+    syncCellColors=function(...args){const result=originalSyncCellColors.apply(this,args);maskLegend(primKey);return result;};
+  }
   const originalSetOverlay=setOverlay;
   setOverlay=function(...args){
     const result=originalSetOverlay.apply(this,args);
@@ -179,7 +204,7 @@
         raw[2*i]=q&255;raw[2*i+1]=q>>8;
       }
       let binary='';for(let i=0;i<raw.length;i+=8192)binary+=String.fromCharCode(...raw.subarray(i,i+8192));
-      P.arrays[k]={w:rg.w,h:rg.h,cell_m:rg.dx,lo,hi,bits:16,b64:btoa(binary),
+      P.arrays[k]={w:rg.w,h:rg.h,cell_m:rg.dx,origin:[rg.left,rg.top],pixel:[rg.dx,rg.dy],lo,hi,bits:16,b64:btoa(binary),
         // Result-grid aliases keep older templates' Info arithmetic compatible.
         valid,total:n,comparisonTemporary:true,display_valid:valid,display_total:n,leaf:'comparison_'+identity,label:result.label,short:result.label,
         comparisonAngleKind:result.id==='difference'?0:result.mode==='degrees'?1:result.mode==='radians'?2:0,
@@ -204,6 +229,7 @@
         if(c>=0&&r>=0&&c<rg.w&&r<rg.h)displayed[j*W+i]=result.values[r*rg.w+c];
       }
       temporary.set(k,displayed);
+      temporaryCells.set(k,result.values);
       lastShown={key:k,id:result.id,lo:result.lo,hi:result.hi,paletteName:result.paletteName,rangeLabel:result.rangeLabel,maskKey:result.maskKey,
         style:result.style&&{stops:copy(result.style.stops),reverse:!!result.style.reverse,...(result.style.builtin?{builtin:result.style.builtin}:{})}};
       // A difference must not inherit an unrelated overlay blend.
@@ -217,7 +243,7 @@
         delete P.arrays[k];cache.delete(k);
         clearStyle(k);
       }
-      temporary.clear();
+      temporary.clear();temporaryCells.clear();
       lastShown=null;
       generation++;
       if(restore&&owned){

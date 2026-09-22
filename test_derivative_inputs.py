@@ -14,6 +14,7 @@ import warnings
 
 import h5py
 import numpy as np
+from pyproj import CRS
 
 import enrich_hdf5 as E
 
@@ -48,6 +49,7 @@ def identify(h5):
     h5.require_group("identification").attrs.update({
         "common_grid_resolution_m": RESOLUTION,
         "common_crs_epsg": EPSG,
+        "common_crs_wkt": CRS.from_epsg(EPSG).to_wkt(),
         "common_grid_transform": TRANSFORM,
         "common_grid_shape": SHAPE,
         "chunk_edge_px": 16,
@@ -274,6 +276,39 @@ class TestCleanedDerivativeInputs(unittest.TestCase):
                         self.assertIn("not a radar-swath", attrs["look_side_mask_note"])
                     if path.endswith('/aspect'):
                         self.assertEqual(attrs['aspect_convention'], 'downhill_clockwise_from_grid_north')
+
+    def test_every_derived_family_has_local_grid_and_truthful_provenance(self):
+        paths = {
+            f"{E.DERIVED_GROUP}/slope": DEM,
+            f"{E.DERIVED_GROUP}/aspect": DEM,
+            f"{GEOMETRY}/local_incidence_angle": DEM,
+            f"{GEOMETRY}/incidence_angle_flat": DEM,
+            f"{RADAR_OUTPUT}/HH/coherence_mask": f"{RADAR_OUTPUT}/HH/cor",
+            **{f"{E.DERIVED_GROUP}/forest_cover_fraction_{p.split('/')[-2]}": p
+               for p in VEGETATION},
+        }
+        with h5py.File(self.output, "r") as h5:
+            for path, dependency in paths.items():
+                with self.subTest(path=path):
+                    attrs = h5[path].attrs
+                    self.assertIn("crs_wkt", attrs)
+                    self.assertEqual(attrs["crs_wkt"], CRS.from_epsg(EPSG).to_wkt())
+                    np.testing.assert_array_equal(attrs["transform"], TRANSFORM)
+                    self.assertEqual(attrs["resolution_m"], RESOLUTION)
+                    self.assertEqual(attrs["source_dataset"], "CryoGARS derived product")
+                    self.assertEqual(attrs["resampling_method"], "none")
+                    self.assertIn("derived", attrs["resampling_note"])
+                    self.assertEqual(attrs["derived_from"], dependency)
+                    self.assertEqual(attrs["derived_from_archive"], "self")
+                    self.assertEqual(attrs["derived_from_stage"], "enriched_base_after_cleaning")
+                    self.assertIn("method", attrs)
+            mask = h5[f"{RADAR_OUTPUT}/HH/coherence_mask"]
+            self.assertEqual(mask.attrs.get("method"), "coherence_threshold_inclusive")
+            self.assertEqual(mask.attrs["coherence_threshold"], 0.3)
+            self.assertEqual(mask.dtype, np.dtype("uint8"))
+            expected = np.where(np.isfinite(self.expected_cor),
+                                self.expected_cor >= 0.3, 255).astype("uint8")
+            np.testing.assert_array_equal(mask[...], expected)
 
     def test_new_enrichment_lineage_distinguishes_unknown_parent_history(self):
         with h5py.File(self.output, 'r') as h5:

@@ -133,21 +133,23 @@ existing manifest. Full scans and hashes can take considerable time.
 
 Default manifests include per-file SHA-256 and per-dataset summary statistics.
 Summary statistics alone cannot localize every possible corruption. The current
-Python verifier only checks files it finds: it does not fail for a missing
-manifest-listed file or an extra unlisted file. Check the expected file list
-separately. On systems with `sha256sum`, run `sha256sum -c MANIFEST.sha256` from
-the archive directory after transfer; this checks every listed file, including
-whether it is missing.
+verifier fails missing expected files, extra unlisted files, name collisions and
+incomplete records, then checks file sizes and hashes. On systems with
+`sha256sum`, `sha256sum -c MANIFEST.sha256` also checks every listed file after
+transfer, but does not detect extra files.
 
-The optional `--deep` dataset hashing also needs correction before being used
-as reproducible evidence: object/string arrays are hashed from NumPy memory
-representations rather than a stable serialization. Per-file SHA-256 hashes
-do not have that limitation.
+Optional `--deep` uses the versioned dataset fingerprint format: framed type/shape
+metadata and ordered values, with explicit string encoding/lengths. Unsupported
+compound/reference types fail rather than hashing object pointers. Keep the
+matching fingerprint version when comparing manifests. File hashes establish
+byte identity; neither file nor dataset hashes establish scientific accuracy.
 
 ## Maintain the viewer without rereading HDF5
 
-Production rollout and the coordinated scientific rebuild remain on hold. The
-procedures below document maintenance steps for a later authorized rollout.
+The eight local explorers were rebuilt and installed on 2026-09-21 from unchanged
+archives; see the [rebuild record](reviews/2026-09-21-explorer-rebuild.md). Archive
+repair remains deferred. Local maintenance below is separate from publishing the
+public website, whose deployed bundle must be verified after upload.
 
 ### Entrance only
 
@@ -202,43 +204,69 @@ Changing scientific data or sampling still requires extraction from HDF5.
 `product_guide.js` contains additional scientific notes under review. Passing
 its standalone checks does not mean those notes are the active side panel.
 
-## Checks
+## Prepare a public viewer bundle
 
-Run the six source suites explicitly; do not discover tests inside backups:
+The public website is distributed separately in
+[`AnantGahlaut/cryogars-atlas-viewer`](https://github.com/AnantGahlaut/cryogars-atlas-viewer).
+After validating local exports, prepare an empty destination:
 
 ```bash
-python -m unittest test_build_hdf5 test_make_explorer test_make_index test_refresh_explorers test_explorer_addon test_scientific_methods
+python scripts/package_public_viewer.py viewer "path/to/empty-public-bundle" --report "path/to/package-report.json"
+python -m unittest discover -s tests -p "test_package_public_viewer.py"
 ```
 
-All **250 tests passed** in the existing scientific environment on 2026-09-08.
-They use small offline fixtures and do not validate the entire research archive.
+This packages only the index and eight site pages. It removes machine-specific
+paths from lineage records, marks redacted recipe hashes as pre-redaction
+identities, and checks that scientific data and executable HTML stay unchanged.
+Seven packaging tests passed on September 22. Keep the full original lineage
+locally; the public copy is explicitly redacted.
 
-With the eight generated explorers and entrance present:
+Update only those nine pages and the distribution README in a clean checkout of
+the viewer repository, retaining its `.nojekyll`. Verify the exact committed page
+hashes, push normally, then verify HTTP responses and page hashes at the public
+URL after Pages deploys. Do not copy the whole working directory into the public
+distribution. Publishing prepared display pages does not require an HDF5 rebuild.
+
+## Checks
+
+Run the source suites explicitly from the repository root so discovery does not
+enter backup directories:
+
+```bash
+python -m unittest test_annotation_lineage test_audit_archive test_build_hdf5 test_build_provenance test_cleaning_metadata test_comparison_addon test_derivative_inputs test_derived_grid_metadata test_explorer_addon test_four_product_metadata test_incidence_look_side test_incidence_summary test_make_explorer test_make_index test_manifest test_mask_incidence_notes_metadata test_product_units test_projected_geometry test_refresh_explorers test_scientific_methods test_vertical_reference_metadata test_viewer_metadata_corrections
+```
+
+The September 21 rebuild verification passed **390 tests** in the existing
+scientific environment. These use small offline fixtures, not full research-array
+validation. The earlier September 8 preparation passed 250 tests; that is
+historical evidence rather than the current suite size.
+
+With generated pages present, selected checks are:
 
 ```bash
 node ui_preview/check_index.js
 node ui_preview/check_dem_notes.js
-node ui_preview/check_product_guides.js
+node ui_preview/check_workspace.js
+node ui_preview/check_cell_averaging.js
+node ui_preview/check_cell_controls.js
+node ui_preview/check_preview.js viewer/index.html
 ```
 
-These passed during preparation, including 1,664 standalone product-guide
-renders. `node ui_preview/check_preview.js viewer/index.html` checks JavaScript
-syntax in a specified HTML file; it can also be run on each site page. All 17
-script blocks in the nine current pages compiled.
+`check_workspace.js` has been repaired and checks current Info/validity behavior.
+The index/page checks require generated artifacts. `check_product_guides.js` tests
+the separate guide implementation; it does not prove that content is installed
+in the active notes panel. The rebuild separately checked all 1,664 active notes.
 
-**Known stale check:** `ui_preview/check_workspace.js` expects a removed
-`layerDisplayName` function and fails against the current template. Repair or
-retire it before making it part of release automation. Preview/rollout checks
-that depend on local backup baselines are not portable source-only checks.
+`check_grid_placement.js` requires the local evidence file
+`docs/product_trace/evidence/viewer_metadata.json`, which is excluded from source
+distribution. Preserve that matching snapshot for reproducing its eight-site
+checks. Preview/rollout checks using local backup baselines likewise are not
+portable source-only checks.
 
-`ui_preview/check_grid_placement.js` also requires the local evidence file
-`docs/product_trace/evidence/viewer_metadata.json`. That snapshot is excluded
-from the source repository, so this check cannot run from a source checkout
-alone. Retain the matching local snapshot when reproducing its eight-site checks.
-
-No browser appearance, WebGL behaviour, keyboard accessibility, small-screen
-layout, or hosted deployment was assessed in this pass. Those remain separate
-release-review tasks.
+The [rebuild record](reviews/2026-09-21-explorer-rebuild.md) separates array, notes,
+page and existing numerical-renderer evidence. That run did not perform a new
+visual browser review; cross-browser, keyboard, small-screen and hosted-delivery
+acceptance retain their own scope.
 
 ## Files required in a source release
 

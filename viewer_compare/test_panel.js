@@ -48,7 +48,7 @@ function bridgeHarness(options={}){
   }
   const uniforms={};
   const ctx={P,G:P.grid,W:2,H:2,DEM:'dem',window:{SnowCompareCore:require('./core')},primKey:'dem',ovKey:null,active:'dem',glOn:true,infoOpen:false,
-    elev:new Float32Array([100,100,100,100]),shownInfoLevel:-1,
+    elev:new Float32Array([100,100,100,100]),shownInfoLevel:-1,opts:{colors:'smooth'},cellRendered:[null,null],
     values:{dem:new Float32Array([1,2,3,4])},floats:k=>ctx.values[k]||new Float32Array([1,2,3,4]),cache:new Map(),tabs:[{id:'dem',kind:'layer',key:'dem',pin:true},{id:'timeline',kind:'timeline',pin:true},{id:'details',kind:'details',pin:true}],
     PREF:{palettes:{},customs:{},ranges:{},rangeModes:{},reverse:{},savedPalettes:{},typeActive:{}},
     BUILTIN_STOPS:{terrain:[[0,'#000000'],[1,'#ffffff']],viridis:[[0,'#440154'],[1,'#fde725']],diverging:[[0,'#b42d1d'],[.5,'#f6f5f0'],[1,'#1d5aa7']]},
@@ -70,7 +70,7 @@ function bridgeHarness(options={}){
       templateFunction('syncShownResolution')+templateFunction('renderInfo'),ctx);
   }
   if(options.realPrimary){
-    Object.assign(ctx,{bVal:'values',toGL:v=>v,CM:{custom:0,viridis:1},RAMP:{},applyCustomUniforms(){},syncPaletteSettings(){}});
+    Object.assign(ctx,{bVal:'values',toGL:v=>v,CM:{custom:0,viridis:1},RAMP:{},applyCustomUniforms(){},syncPaletteSettings(){},syncCellColors(){}});
     ctx.gl.bindBuffer=()=>{};ctx.gl.bufferData=(_target,v)=>{ctx.uploaded=Array.from(v);};
     for(const k of ['uCmap','uReverse','uDiverging','uAngleKind'])ctx.U[k]=k;
     vm.runInContext(templateFunction('customRampCss')+templateFunction('setPrimary'),ctx);
@@ -82,6 +82,8 @@ function bridgeHarness(options={}){
     vm.runInContext(template.slice(template.indexOf('function autoLevel(){'),template.indexOf('/* ================= layers'))+
       templateFunction('draw'),ctx);
   }
+  if(options.cells)vm.runInContext(templateFunction('decodeAt')+templateFunction('cellSamples'),ctx);
+  if(options.averages)vm.runInContext(templateFunction('finishCellValues'),ctx);
   if(options.withoutAngular)ctx.angularKind=undefined;
   vm.runInContext(fs.readFileSync('viewer_compare/bridge.js','utf8'),ctx);
   return {ctx,api:ctx.window.SnowCompareViewer,stored,uniforms};
@@ -524,3 +526,36 @@ test('overlay mask flags reset and temporary transitions retain categorical boun
 });
 
 module.exports={bridgeHarness};
+
+test('Cells mode receives exact native comparison cells and transform without terrain resampling or packing',()=>{
+ const {ctx,api}=bridgeHarness({cells:true});
+ const values=new Float32Array([.123456789,NaN,0,.987654321,4,5,6,7]);
+ api.show(comparison({grid:{w:4,h:2,dx:1.5,dy:-1.5,left:100.75,top:199.25},values}));
+ const k=ctx.primKey,L=ctx.P.arrays[k];
+ assert.deepEqual(Array.from(ctx.cellSamples(k)),Array.from(values),'keep exact result-grid values');
+ assert.deepEqual(Array.from(L.origin),[100.75,199.25]);assert.deepEqual(Array.from(L.pixel),[1.5,-1.5]);
+ assert.equal(ctx.floats(k).length,4,'Smooth and Valid shown still use terrain samples');
+ api.clear();assert.equal(ctx.P.arrays[k],undefined);
+});
+test('Cells mask cutoff classifies original exported fractions and preserves valid zero and holes',()=>{
+ const {ctx,api}=bridgeHarness({cells:true});
+ const k='science/UAVSAR/INTERFEROMETRY/pair/grids/coherence_mask';
+ ctx.P.arrays[k]={w:3,h:1,cell_m:6,bits:8,lo:0,hi:1,b64:Buffer.from([1,128,0]).toString('base64'),leaf:'coherence_mask'};
+ assert.deepEqual(Array.from(ctx.cellSamples(k)),[0,.5,NaN]);
+ api.setMaskOptions(k,{mode:'binary',cutoff:.6});assert.deepEqual(Array.from(ctx.cellSamples(k)),[0,0,NaN]);
+ api.setMaskOptions(k,{mode:'binary',cutoff:.5});assert.deepEqual(Array.from(ctx.cellSamples(k)),[0,1,NaN]);
+ api.setMaskOptions(k,{mode:'average',cutoff:.5});assert.deepEqual(Array.from(ctx.cellSamples(k)),[0,.5,NaN]);
+});
+
+test('Cells mask averaging receives original fractions and applies the cutoff once afterward',()=>{
+ const {ctx,api}=bridgeHarness({cells:true,averages:true});
+ const k='science/UAVSAR/INTERFEROMETRY/pair/grids/coherence_mask';
+ ctx.P.arrays[k]={w:3,h:1,cell_m:6,bits:8,lo:0,hi:1,b64:Buffer.from([1,128,255]).toString('base64'),leaf:'coherence_mask'};
+ api.setMaskOptions(k,{mode:'binary',cutoff:.6});
+ assert.deepEqual(Array.from(ctx.cellSamples(k)),[0,.5,1],'never classify source cells before averaging');
+ const averaged=new Float32Array([.5,NaN,0]);
+ assert.deepEqual(Array.from(ctx.finishCellValues(k,averaged)),[0,NaN,0]);
+ api.setMaskOptions(k,{mode:'binary',cutoff:.5});
+ assert.deepEqual(Array.from(ctx.finishCellValues(k,averaged)),[1,NaN,0]);
+ assert.deepEqual(Array.from(averaged),[.5,NaN,0],'cutoff changes leave cached mean fractions untouched');
+});

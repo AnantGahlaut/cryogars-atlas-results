@@ -40,7 +40,8 @@ tree, colour legend, and comparison controls remain available beside the map.*
   grid spacing, data availability, source information, equations, and limitations.
 - **Control the display.** Blend overlays, adjust terrain detail and lighting,
   choose palettes and colour stretches, and save custom palette presets by
-  product type.
+  product type. Choose Smooth interpolation or Cells averaging at the selected
+  Detail spacing, with one colour per displayed block.
 - **Compare two products.** Select another same-product layer or temporarily
   import a numeric GeoTIFF. Switch between reference **A**, comparison **B**,
   and **B − A** on the existing 3D terrain.
@@ -84,7 +85,7 @@ Use the full archive for quantitative modeling. Read the
 [comparison guide and limitations](docs/BROWSER_COMPARISON.md) and
 [scientific notes](docs/scientific-notes.md) before interpreting differences.
 
-The eight explorer pages total approximately **105 MiB**; larger sites can take
+The eight explorer pages total approximately **107 MiB**; larger sites can take
 longer to load. Application code and display data are embedded. Optional Google
 Fonts have local fallbacks.
 
@@ -181,16 +182,19 @@ and building a viewer from an existing archive.
 
 ## Work in progress
 
-**Status reviewed: 2026-09-13.** The public viewer is a working research
-snapshot, not yet the final corrected scientific release. Approved corrections
-have been implemented and tested in the working source, but that is distinct
-from verifying regenerated HDF5 files and browser exports.
+**Status reviewed: 2026-09-22.** All eight local explorers have been freshly
+exported and validated from the unchanged HDF5 archives. They include the current
+product notes, Cells averaging, validity help, and label/export corrections.
+That bundle is now [published and verified](docs/reviews/2026-09-22-public-viewer-update.md)
+at the existing public URL. The viewer remains a research preview. Archive repairs are deferred until
+verified backup storage is available; the display rebuild does not apply those
+scientific corrections to stored data.
 
 ### Before the next scientific release
 
 | Area | Current status and remaining work |
 | --- | --- |
-| Corrected archive and viewer | Aspect direction and circular display handling, cleaned-input derivatives, metadata, and label corrections are prepared in working source. Regenerate the affected products, validate all eight sites, and publish one matching viewer snapshot. The coordinated rebuild remains on hold pending final review. |
+| Corrected archive and viewer | Eight local explorers rebuilt and validated: 1,664 layers and product notes, 856 independent native-block samples, and 390 offline Python tests. Circular display aggregation and label corrections are included. Historical aspect direction, cleaned-input derivatives, geometry and archive metadata still require backed-up archive regeneration. |
 | Radar geometry | Look-side, projected-heading, and summary corrections are implemented. Actual aircraft-height compatibility, some vertical-reference information, and navigation accuracy still need supporting evidence. Incidence remains approximate; full terrain occlusion is not implemented. |
 | Archive download and integrity | Finalize verified backup storage and the distribution files, generate and verify final release manifests, then publish the archive download. Validator and forward-provenance fixes are prepared; historical missing lineage remains explicitly unknown. |
 | Reproducibility and usability | Test installation from a fresh environment, establish portable automated checks, and complete cross-browser, keyboard, palette, comparison/PNG, and memory-limit acceptance. Keep documentation, legend labels, and published versions synchronized. |
@@ -214,6 +218,8 @@ validated retrieval model is not included.
 
 ### Documentation and attribution
 
+[Documentation index](docs/README.md) ·
+[Design document — review draft](docs/design.md) ·
 [Comparison guide](docs/BROWSER_COMPARISON.md) ·
 [Scientific notes](docs/scientific-notes.md) ·
 [Data sources](docs/data-sources.md) ·
@@ -226,6 +232,6 @@ the NSIDC, ASF, and ORNL archives. Cite the original datasets and identify the
 site, dates, subset, and processing version used in your analysis.
 
 **Code license: not yet selected.** Source datasets retain their own attribution
-and use requirements. The development repository remains private; the prepared
+and use requirements. The development repository,
 [viewer distribution](https://github.com/AnantGahlaut/cryogars-atlas-viewer) and
 [hosted Atlas](https://anantgahlaut.github.io/cryogars-atlas-viewer/) are public.

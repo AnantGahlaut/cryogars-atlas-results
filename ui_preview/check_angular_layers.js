@@ -32,7 +32,7 @@ const scope=vm.createContext({P:{arrays},primKey:null,ovKey:null,
   layerRange:()=>[0,360],layerReverse:()=>0,isDiverging:()=>false,
   floats:()=>new Float32Array([359,1]),toGL:a=>a,applyCustomUniforms:noop,
   customRampCss:()=>'',fmt:String,syncRangeStatus:noop,renderInfo:noop,
-  syncPaletteSettings:noop,syncLegendEditor:noop,draw:noop
+  syncPaletteSettings:noop,syncLegendEditor:noop,syncCellColors:noop,draw:noop
 });
 vm.runInContext(extract('function productKind(k){','const PRODUCT_CMAP='),scope);
 vm.runInContext(extract('function setPrimary(k,','/* ================= info card'),scope);

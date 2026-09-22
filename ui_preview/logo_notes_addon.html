@@ -261,7 +261,7 @@
       '<p>'+(kind==='wrapped_phase'?'The block phase described above is packed for display.':
       'Complete display blocks are averaged over non-NaN values, then packed for display; one finite value among otherwise NaN cells can supply a block.')+
       ' The exported colour grid is '+escape(layer.cell)+' m; the archive grid is '+escape(data.grid)+' m. Hover readouts approximate these coarser display samples.</p>';
-    if(kind!=='wrapped_phase')text+='<p>The updated renderer blends finite terrain-grid samples only, with interpolation weights renormalized after excluding missing values. Primary colours require at least half of the interpolation weight to be valid; overlays require more than half. Older viewers may still mix missing sentinels into scalar colours, pulling them toward the low end of the palette. Use the archive and its validity mask for analysis.</p>';
+    if(kind!=='wrapped_phase')text+='<p>In Smooth mode, the updated renderer blends finite terrain-grid samples only, with interpolation weights renormalized after excluding missing values. Primary colours require at least half of the interpolation weight to be valid; overlays require more than half. Older viewers may still mix missing sentinels into scalar colours, pulling them toward the low end of the palette. Use the archive and its validity mask for analysis.</p>';
     return text;
   }
   function approvedAdditionalNotes(layer){
@@ -339,7 +339,7 @@
     return text+'<h3>Display and analysis</h3><p>Incomplete bottom/right display blocks are dropped. Means use non-NaN values with no minimum coverage fraction; all-missing blocks remain missing. Finite results are packed into 8 bits; hover readouts are approximate.</p>'+
       '<dl>'+row('Exported colour grid',layer.cell!=null?layer.cell+' m':'Not recorded')+
       row('Archive grid',data.grid!=null?data.grid+' m':'Not recorded')+'</dl>'+
-      '<p>The updated renderer blends finite terrain-grid samples only, with interpolation weights renormalized after excluding missing values. Primary colours require at least half of the interpolation weight to be valid; overlays require more than half. Older viewers may still mix missing sentinels into scalar colours, pulling them toward the low end of the palette. Use the archive and its validity mask for analysis.</p>';
+      '<p>In Smooth mode, the updated renderer blends finite terrain-grid samples only, with interpolation weights renormalized after excluding missing values. Primary colours require at least half of the interpolation weight to be valid; overlays require more than half. Older viewers may still mix missing sentinels into scalar colours, pulling them toward the low end of the palette. Use the archive and its validity mask for analysis.</p>';
   }
   function maskNotes(layer){
     const source=layer.source||current,leaf=layer.leaf||source.split('/').pop();
@@ -432,6 +432,15 @@
       (restricted?'<p>The finite-cell denominator is measured after the look-side restriction.</p>':'')+
       '<p>This is a geometry statistic. Radar-shadow and coverage estimates additionally require terrain-blocking and swath tests.</p>';
   }
+  function displayNotes(){
+    return '<details class="nxn-dem-detail"><summary>Display cells &amp; colours</summary>'+
+      '<p>Controls → Cell colors switches between Smooth and Cells. Smooth interpolates finite values between terrain-mesh vertices; aspect and wrapped phase use unit-vector interpolation.</p>'+
+      '<p>Cells averages the exported values into blocks at the current Detail spacing: 192 m detail means one colour per 192 m block. Auto detail updates the blocks as you zoom. Block edges start at the terrain-grid origin; partial edge blocks are clipped to its retained extent.</p>'+
+      '<p>Finite values are weighted by their overlapping area within each block. Missing values are excluded, an entirely missing block stays blank, and zero is valid. Aspect and wrapped phase average unit directions; cancelling directions stay blank. Each resulting block has one palette colour without neighbouring interpolation, terrain shading or wireframe brightening. Overlay opacity still blends primary and overlay colours.</p>'+
+      '<p>Coherence masks average the original exported passing fractions before applying the selected 0–1 cutoff. This cannot recover a pooled fraction of native passing cells because their original valid counts are unavailable. Temporary binary results use an area-weighted majority, with ties returning 1; signed −1/0/+1 transitions use the most-supported state, with ties blank.</p>'+
+      '<p>In Cells mode, Valid shown counts finite averaged blocks whose corresponding terrain-grid sample is finite, divided by all blocks. In Smooth mode it counts finite layer and terrain samples at the current mesh detail. Neither counts visible screen pixels.</p>'+
+      '<p>These are browser display values: changing Detail cannot recover individual 3 m archive values or reverse earlier export averaging, cropping and packing. Terrain heights are packed separately at 16 bits; ordinary layer values come from 8-bit exported samples. In Cells mode, hover reports the current block value. Temporary comparisons use their selected result-grid values.</p></details>';
+  }
   function render(){
     const layer=data.layers[current];if(!layer)return;
     const a=layer.attrs,isElevation=current===data.dem;
@@ -441,7 +450,7 @@
       '<p>For this first preview, this layer shows recorded metadata only. We can add its explanation and calculation after reviewing the product together.</p>';
     const survey=a.acquisition_date_end&&a.acquisition_date_end!==a.acquisition_date?
       [a.acquisition_date,a.acquisition_date_end]:a.acquisition_date;
-    el('nxn-content').innerHTML=intro+'<h3>Recorded for this layer</h3><dl>'+
+    el('nxn-content').innerHTML=intro+displayNotes()+'<h3>Recorded for this layer</h3><dl>'+
       row('Source dataset',a.source_dataset)+row('Source file',a.source_filename)+
       row(isElevation?'Recorded acquisition date':'Source survey',survey)+row('Source units',a.units)+
       row('Source native spacing',a.source_native_resolution_m!=null?a.source_native_resolution_m+' m':null)+

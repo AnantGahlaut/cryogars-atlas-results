@@ -36,6 +36,7 @@ function runtime(grid, arrays) {
     layerReverse: () => 0, isDiverging: () => false, nodeAt: () => null,
     applyCustomUniforms: noop, syncRangeStatus: noop, renderInfo: noop, syncPaletteSettings: noop,
     syncLegendEditor: noop, draw: noop, fmt: String, esc: String,
+    opts: {colors: 'smooth'}, syncCellColors: noop,
     drag: null, probeAt: () => context.hit, hit: {i: 0, j: 0}});
   vm.runInContext('const G=P.grid,W=G.w,H=G.h;let primKey=null,ovKey=null;' +
     'const elev=new Float32Array(W*H).fill(2000);' + decoding + kinds + layers + probe, context);

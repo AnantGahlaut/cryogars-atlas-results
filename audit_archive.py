@@ -43,7 +43,7 @@ REQUIRED_ARRAY_ATTRS = (
 )
 REQUIRED_IDENT_ATTRS = (
     "site_name", "common_crs_wkt", "common_crs_epsg", "common_grid_transform",
-    "common_grid_shape", "uavsar_native_resolution_m", "resampling_note",
+    "common_grid_shape", "common_grid_resolution_m", "uavsar_native_resolution_m", "resampling_note",
     "product_version", "created_date", "citation_note",
 )
 
@@ -77,8 +77,8 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
     import h5py
     import numpy as np
 
-    key = path.stem
-    out: dict = {"site": key}
+    key = path.stem.removesuffix(".enriched")
+    out: dict = {"site": key, "archive": path.name}
     try:
         handle = h5py.File(path, "r")
     except OSError as exc:
@@ -95,13 +95,33 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
             a.fail.append(f"{key}: no identification group")
             return out
         ident = f["identification"].attrs
-        for k in REQUIRED_IDENT_ATTRS:
-            a.check(k in ident, f"{key}: identification missing {k!r}")
+        enriched = "enrichment_version" in ident
+        out["archive_kind"] = "enriched" if enriched else "base"
+        missing = [k for k in REQUIRED_IDENT_ATTRS if k not in ident]
+        for k in missing:
+            a.fail.append(f"{key}: identification missing {k!r}")
+        if missing:
+            out["unreadable"] = True
+            return out
 
-        shape = tuple(int(v) for v in ident["common_grid_shape"])
-        transform = tuple(float(v) for v in ident["common_grid_transform"])
-        res = float(ident["common_grid_resolution_m"])
-        epsg = int(ident["common_crs_epsg"])
+        try:
+            dimensions = tuple(float(v) for v in ident["common_grid_shape"])
+            transform = tuple(float(v) for v in ident["common_grid_transform"])
+            res = float(ident["common_grid_resolution_m"])
+            epsg_value = float(ident["common_crs_epsg"])
+            if (len(dimensions) != 2
+                    or not all(math.isfinite(v) and v > 0 and v.is_integer() for v in dimensions)
+                    or len(transform) != 6 or not all(math.isfinite(v) for v in transform)
+                    or not math.isfinite(res) or res <= 0
+                    or not math.isfinite(epsg_value) or not epsg_value.is_integer()):
+                raise ValueError("expected positive 2-D integer shape, six finite transform terms, "
+                                 "positive finite resolution and an integer EPSG")
+            shape = tuple(int(v) for v in dimensions)
+            epsg = int(epsg_value)
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            a.fail.append(f"{key}: invalid identification grid metadata ({exc})")
+            out["unreadable"] = True
+            return out
         out.update(shape=shape, epsg=epsg, res=res,
                    name=str(ident["site_name"]))
 
@@ -117,6 +137,7 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
         # ---- every array on the common grid ------------------------------
         arrays: list[str] = []
         stats: dict[str, dict] = {}
+        empty: dict[str, dict] = {}
 
         def visit(name, obj):
             if not isinstance(obj, h5py.Dataset):
@@ -129,8 +150,16 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
                     a.fail.append(f"{key}: {name} missing attribute {k!r}")
             if "transform" in obj.attrs:
                 got = tuple(float(v) for v in obj.attrs["transform"])
-                if not all(abs(x - y) < 1e-6 for x, y in zip(got, transform)):
+                if len(got) != len(transform) or not all(
+                        abs(x - y) < 1e-6 for x, y in zip(got, transform)):
                     a.fail.append(f"{key}: {name} transform differs from grid")
+            if "resolution_m" in obj.attrs:
+                try:
+                    same_resolution = math.isclose(float(obj.attrs["resolution_m"]), res,
+                                                   rel_tol=0., abs_tol=1e-6)
+                except (TypeError, ValueError):
+                    same_resolution = False
+                a.check(same_resolution, f"{key}: {name} resolution_m differs from grid")
             if "crs_wkt" in obj.attrs and \
                str(obj.attrs["crs_wkt"]) != str(ident["common_crs_wkt"]):
                 a.fail.append(f"{key}: {name} CRS differs from grid")
@@ -140,11 +169,41 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
                 finite = np.isfinite(data.real) & np.isfinite(data.imag)
             else:
                 finite = np.isfinite(data)
+            # Integer nodata is finite (notably mask 255). Neither zero nor a
+            # failed coherence test is missing. Honor both writer attributes.
+            for attr in ("nodata", "nodata_value"):
+                if attr not in obj.attrs:
+                    continue
+                sentinel = obj.attrs[attr]
+                if isinstance(sentinel, bytes):
+                    sentinel = sentinel.decode("utf-8")
+                if isinstance(sentinel, str) and sentinel.lower() in ("nan", "none"):
+                    continue
+                try:
+                    sentinel = complex(sentinel) if np.iscomplexobj(data) else float(sentinel)
+                    finite &= data != sentinel
+                except (ValueError, TypeError):
+                    a.fail.append(f"{key}: {name} has invalid {attr} {sentinel!r}")
             n = int(finite.sum())
+            fraction = n / data.size if data.size else 0.0
+            for attr, measured in (("valid_pixel_count", n), ("valid_fraction", fraction)):
+                if attr in obj.attrs:
+                    try:
+                        recorded = float(obj.attrs[attr])
+                        matches = (recorded == measured if attr == "valid_pixel_count"
+                                   else math.isclose(recorded, measured, rel_tol=0., abs_tol=1e-9))
+                    except (TypeError, ValueError):
+                        matches = False
+                    a.check(matches, f"{key}: {name} {attr} differs from stored values ({measured})")
             if n == 0:
-                a.fail.append(f"{key}: {name} is entirely nodata")
+                stats[name] = {"valid": 0, "frac": fraction,
+                               "min": None, "max": None, "median": None}
+                empty[name] = dict(obj.attrs)
                 return
             vals = data[finite]
+            if name.rsplit("/", 1)[-1] == "coherence_mask":
+                a.check(bool(np.all((vals == 0) | (vals == 1))),
+                        f"{key}: {name} has valid values outside stored mask states 0/1")
             if not np.iscomplexobj(data):
                 stats[name] = {"valid": n,
                                "frac": n / data.size,
@@ -165,11 +224,38 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
                                "median": float(np.median(mag))}
 
         f["science"].visititems(visit)
+        # A declared empty input is a narrow, inspectable explanation. A
+        # generic "no values" status alone cannot authorize an empty output.
+        for name, attrs in empty.items():
+            source = str(attrs.get("derived_from", "")).lstrip("/")
+            source_key = source.removeprefix("science/")
+            reason = attrs.get("empty_reason")
+            ancestors, cursor = {name}, source_key
+            while cursor in empty and cursor not in ancestors:
+                ancestors.add(cursor)
+                cursor = str(empty[cursor].get("derived_from", "")).lstrip("/").removeprefix("science/")
+            explained = (
+                enriched and reason == "no_valid_input_cells"
+                and attrs.get("derived_from_archive") == "self"
+                and attrs.get("valid_pixel_count") == 0
+                and attrs.get("valid_fraction") == 0
+                and attrs.get("value_stats_stage") == "stored_array"
+                and attrs.get("value_stats_status") == "no_valid_values"
+                and source.startswith("science/") and cursor not in ancestors
+                and stats.get(source_key, {}).get("valid") == 0
+                and f[source].file.id == f.id
+                and f[source].attrs.get("valid_pixel_count") == 0)
+            if explained:
+                stats[name]["empty_reason"] = reason
+                a.warn.append(f"{key}: {name} is entirely nodata; recorded {reason} ({source})")
+            else:
+                a.fail.append(f"{key}: {name} is entirely nodata without a verified empty-input explanation")
         out["arrays"] = len(arrays)
         a.check(len(arrays) > 0, f"{key}: no science arrays")
 
         # ---- hollow acquisition groups -----------------------------------
         hollow = []
+        out["uavsar_group_basis"] = "merged_acquisitions" if enriched else "source_product_groups"
         uav = f.get("science/UAVSAR")
         if uav is not None:
             for level in uav:
@@ -192,7 +278,7 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
         if target:
             best, best_name = None, None
             for name, st in stats.items():
-                if not name.startswith("LIDAR"):
+                if not name.startswith("LIDAR/") or name.startswith("LIDAR/DERIVED/"):
                     continue
                 km2 = st["valid"] * res * res / 1e6
                 if best is None or abs(km2 - target) < abs(best - target):
@@ -201,9 +287,15 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
                 err = 100 * (best - target) / target
                 out.update(area_km2=best, area_ref=target, area_err_pct=err,
                            area_layer=best_name)
-                a.check(abs(err) < 1.0,
-                        f"{key}: best-matching area {best:.1f} km2 differs from "
-                        f"README {target:.1f} km2 by {err:+.2f}%")
+                if enriched:
+                    out["area_check_scope"] = "diagnostic_cleaned_base_lidar"
+                    a.note.append(f"{key}: cleaned lidar area differs from README by {err:+.2f}%; "
+                                  "diagnostic only because enrichment may remove source cells")
+                else:
+                    out["area_check_scope"] = "base_lidar_readme_tolerance"
+                    a.check(abs(err) < 1.0,
+                            f"{key}: best-matching area {best:.1f} km2 differs from "
+                            f"README {target:.1f} km2 by {err:+.2f}%")
 
         # ---- match table -------------------------------------------------
         if "matches" in f:
@@ -218,13 +310,17 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
         if inventory and key in inventory.get("sites", {}):
             entry = inventory["sites"][key]
             expected_lidar = len(entry["lidar"])
-            got_lidar = sum(1 for n in arrays if n.startswith("LIDAR"))
+            got_lidar = sum(1 for n in arrays if n.startswith("LIDAR/")
+                            and not n.startswith("LIDAR/DERIVED/"))
+            out["lidar_derived_arrays"] = sum(n.startswith("LIDAR/DERIVED/") for n in arrays)
             a.check(got_lidar == expected_lidar,
                     f"{key}: {got_lidar} lidar arrays, inventory expects "
                     f"{expected_lidar}")
             out["lidar_arrays"] = got_lidar
             out["lidar_expected"] = expected_lidar
-            out["uavsar_expected"] = len(entry["uavsar_needed"])
+            out["uavsar_inventory_products"] = len(entry["uavsar_needed"])
+            if not enriched:
+                out["uavsar_expected"] = out["uavsar_inventory_products"]
     out["stats"] = stats
     return out
 
@@ -267,15 +363,18 @@ def main(argv=None) -> int:
             continue
         area = r.get("area_km2")
         ref = r.get("area_ref")
-        if area and ref:
+        if area and ref and r["archive_kind"] == "base":
             tot_area += area
             tot_ref += ref
-        print(f"{r['site']:<20}{f'{r['shape'][0]}x{r['shape'][1]}':>14}"
+        grid_label = "{}x{}".format(*r["shape"])
+        err_label = "{:+.2f}%".format(r["area_err_pct"]) if area else "-"
+        label = Path(r["archive"]).stem
+        print(f"{label:<20}{grid_label:>14}"
               f"{r['epsg']:>7}{r['arrays']:>8}{r.get('uavsar_groups',0):>8}"
               f"{len(r.get('hollow',[])):>8}"
               f"{(f'{area:.1f}' if area else '-'):>10}"
               f"{(f'{ref:.1f}' if ref else '-'):>9}"
-              f"{(f'{r['area_err_pct']:+.2f}%' if area else '-'):>9}")
+              f"{err_label:>9}")
     print("-" * 94)
     if tot_ref:
         err = 100 * (tot_area - tot_ref) / tot_ref

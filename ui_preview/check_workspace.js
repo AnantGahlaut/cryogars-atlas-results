@@ -22,6 +22,7 @@ const PREF={ranges:{},rangeModes:{},palettes:{},reverse:{},customs:{},typeActive
 const scope=vm.createContext({$,PREF,document:{createElement:element},console,atob,
   P:{arrays:{},tree:[]},G:{full:[1,1],res_m:3,cell_m:3,origin:[0,0],pixel:[3,-3],dem_valid_fraction:.5},W:101,H:1,DEM:'dem',
   levels:[{w:101,h:1,cell:3}],curLevel:0,glOn:true,elev:new Float32Array(101).fill(100),
+  opts:{colors:'smooth'},cellRendered:[null,null],syncCellColors:noop,
   nodeAt:p=>scope.P.tree.find(n=>n.path===p),
   DOM:{lidar:{c:'teal',n:'Lidar'},meta:{c:'gray',n:'Metadata'},amp:{c:'gold',n:'Amplitude'}},
   bVal:{},bVal2:{},U:new Proxy({},{get:(_,k)=>k}),

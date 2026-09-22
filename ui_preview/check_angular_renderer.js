@@ -48,6 +48,14 @@ function checkShaders(VS, FS) {
     attribute('aPos', 3, [-1,-1,0, 3,-1,0, -1,3,0]);
     gl.uniformMatrix4fv(uniform('uMVP'), false, [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
     gl.uniform3f(uniform('uSun'), 0, 0, 1);
+    // The renderer's optional Cells branch adds complete float samplers; Smooth stays selected.
+    for (const unit of [0,1]) {
+      gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,1,1,0,gl.RED,gl.FLOAT,new Float32Array([0]));
+      gl.uniform1i(uniform(unit?'uCells2':'uCells'),unit);
+    }
     const colors = new Float32Array(24);
     colors.set([1,1,1], 3);
     const stops = new Float32Array([0,1,0,0,0,0,0,0]);

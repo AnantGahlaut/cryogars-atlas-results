@@ -415,6 +415,34 @@ def write_grid(group, name: str, data, chunk: int, attrs: dict):
     """
     import numpy as np
 
+    # New derived arrays carry their own common-grid metadata. Input-provider
+    # identity/resampling belongs to derived_from, not this local calculation.
+    derivation_input = None
+    if "derived_from" in attrs:
+        ident = group.file["identification"].attrs
+        if tuple(ident["common_grid_shape"]) != tuple(data.shape):
+            raise ValueError("Derived array shape differs from the common grid")
+        wkt = ident["common_crs_wkt"]
+        transform = np.asarray(ident["common_grid_transform"], dtype="float64")
+        resolution = float(ident["common_grid_resolution_m"])
+        if (not isinstance(wkt, str) or not wkt.strip() or
+                transform.shape != (6,) or not np.isfinite(transform).all() or
+                not np.isfinite(resolution) or resolution <= 0 or
+                not np.allclose(transform[[0, 1, 3, 4]], [resolution, 0, 0, -resolution])):
+            raise ValueError("Derived array requires a valid common-grid CRS and transform")
+        source = attrs["derived_from"]
+        if not isinstance(source, str) or source not in group.file:
+            raise ValueError("Derived array requires an existing same-archive input")
+        derivation_input = group.file[source]
+        if derivation_input.file.id != group.file.id:
+            raise ValueError("Derived array requires an input in the same archive")
+        if getattr(derivation_input, "shape", None) != data.shape:
+            raise ValueError("Derived input shape differs from the common grid")
+        attrs = dict(attrs, crs_wkt=wkt, transform=transform, resolution_m=resolution,
+                     source_dataset="CryoGARS derived product", resampling_method="none",
+                     resampling_note="Locally derived on the common grid; no additional spatial resampling.",
+                     derived_metadata_version="1.0")
+
     h, w = data.shape
     dt = data.dtype
     kind = dt.kind
@@ -437,6 +465,11 @@ def write_grid(group, name: str, data, chunk: int, attrs: dict):
             "valid_fraction": float(n) / data.size if data.size else 0.0}
     base.update({k: v for k, v in attrs.items() if not k.startswith("value_")})
     base.update(statistics_attrs(data, finite))
+    if (n == 0 and derivation_input is not None and
+            derivation_input.attrs.get("valid_pixel_count") == 0 and
+            derivation_input.attrs.get("value_stats_stage") == "stored_array" and
+            derivation_input.attrs.get("value_stats_status") == "no_valid_values"):
+        base["empty_reason"] = "no_valid_input_cells"
     for k, v in base.items():
         ds.attrs[k] = v
     return ds
@@ -1025,6 +1058,8 @@ def enrich(path, out, cache, session=None, with_insitu=False) -> int:
                                     "treated as invertible. Stored so every "
                                     "user applies the same threshold rather "
                                     "than choosing one silently.",
+                                **input_lineage,
+                                "method": "coherence_threshold_inclusive",
                                 "coherence_threshold": COHERENCE_MIN,
                                 "nodata_value": MASK_NODATA,
                                 "derived_from": f"{dest}/{pol}/cor"})
