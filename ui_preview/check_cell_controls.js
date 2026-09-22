@@ -37,7 +37,8 @@ test('Cells averages to live Detail, aligns both textures, and updates validity 
    U:{uCellColors:'mode',uCellMap:'map0',uCellMap2:'map1'},
    gl:{activeTexture(){},bindTexture(){},texImage2D(...args){uploads.push(args);},uniform4fv(k,v){maps.push([k,v]);},uniform1i(k,v){uniforms[k]=v;}},
    elev:new Float32Array(256).fill(100),shownValidityCache:new WeakMap(),shownInfoKey:'a',
-   glOn:true,window:{},canvas:{clientWidth:100,clientHeight:100},view:{dist:1,tx:0,ty:0,az:0},
+   glOn:true,renderingFrame:true,document:{hidden:false,addEventListener(){}},frameStatus(){},
+   window:{},canvas:{clientWidth:100,clientHeight:100},view:{dist:1,tx:0,ty:0,az:0},
    basis:()=>({e:[0,0,1]}),mul:()=>[],persp:()=>[],viewMat:()=>[],drawPits(){},frames:0,fpsT:0,performance:{now:()=>0},
    seg(id,attr,callback){events[id]=callback;}};
  ctx.elev[128]=NaN;

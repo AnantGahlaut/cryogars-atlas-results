@@ -16,6 +16,7 @@ current source from the historical scientific archives and rebuilt local explore
 | [Release notes](../CHANGELOG.md) | Project release history |
 | [September 21 explorer rebuild](reviews/2026-09-21-explorer-rebuild.md) | Evidence for the installed eight-site display export |
 | [September 22 public update](reviews/2026-09-22-public-viewer-update.md) | Published viewer commit and all-site HTTP/hash verification |
+| [Color editor performance](reviews/2026-09-22-color-editor-performance.md) | Palette updates, idle rendering and regression evidence |
 
 ## Evidence and history
 

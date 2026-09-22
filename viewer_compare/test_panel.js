@@ -56,7 +56,7 @@ function bridgeHarness(options={}){
     Uint8Array,Float32Array,Map,Math,Number,atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64'),
     setPrimary(k){ctx.primKey=k;ctx.uploaded=Array.from(ctx.floats(k));if(options.info){ctx.syncRangeStatus(k);ctx.renderInfo(k);}ctx.draw();},closeLegendEditor(){},renderDetails(){},renderTimeline(){},
     setOverlay(k){ctx.ovKey=k;ctx.overlayUploaded=k?Array.from(ctx.floats(k)):null;ctx.draw();},$:element,renderTabs(){},nodeAt:()=>null,
-    draw(){},syncLegendEditor(){},
+    draw(){},pauseRendering(){},syncLegendEditor(){},
     gl:{uniform1i:(k,v)=>{uniforms[k]=v;},uniform1f:(k,v)=>{uniforms[k]=v;}},
     U:Object.fromEntries(['uMaskBinary','uMaskBinary2','uLo','uHi','uLo2','uHi2'].map(k=>[k,k])),
     DOM:{meta:{c:'#ffffff'}},fmt:String,esc:String,levels:[{w:2,h:2,cell:3}],curLevel:0,
@@ -76,6 +76,9 @@ function bridgeHarness(options={}){
     vm.runInContext(templateFunction('customRampCss')+templateFunction('setPrimary'),ctx);
   }
   if(options.realDraw){
+    // These integration assertions run the actual frame body synchronously;
+    // request scheduling/visibility are covered in check_frame_scheduler.js.
+    Object.assign(ctx,{renderingFrame:true,document:{hidden:false,addEventListener(){}},frameStatus(){}});
     Object.assign(ctx,{canvas:{clientWidth:100,clientHeight:100},opts:{lod:'auto',disp:'solid',sunAz:0,sunEl:0,relief:1},
       view:{dist:1,tx:0,ty:0,az:0},basis:()=>({e:[0,0,1]}),mul:()=>[],persp:()=>[],viewMat:()=>[],drawPits(){},frames:0,fpsT:0,performance:{now:()=>0}});
     for(const k of ['viewport','clear','uniformMatrix4fv','uniform3f','bindBuffer','drawElements'])ctx.gl[k]=()=>{};

@@ -242,6 +242,12 @@ missing. Detail level L uses terrain spacing×2^L and
 | Overlay | Selected opacity blends primary and overlay colours. Cells still respects this blend. |
 | Palette/stretch | Maps decoded values to colour; does not change archive values or restore export clipping. Percentile labels describe stretches, not retained observations. |
 
+Palette, reverse and contrast edits update shader uniforms and the legend while
+retaining the uploaded values and Cells textures. Layer selection, Detail changes
+and mask classification still refresh the affected data. Redraw requests are
+coalesced into one animation frame, with no repeated terrain draws when the scene
+is unchanged or hidden. The FPS indicator marks inactivity as idle.
+
 At 192 m Detail, Cells therefore displays one colour per 192 m block, even if
 its source display array is 24 m. Auto changes the spacing with resolved detail.
 For temporary categorical results, binary Cells uses overlap-weighted majority

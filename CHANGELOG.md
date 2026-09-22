@@ -1,5 +1,14 @@
 # Release notes
 
+## 2026-09-22 — color editor responsiveness
+
+- Color and contrast edits update palette uniforms and legends without reuploading
+  unchanged layer data, rebuilding the info card or replacing Cells textures.
+- Redraw requests share one browser frame; unchanged/hidden scenes stop drawing.
+  The FPS indicator reports idle separately from active rendering.
+- Layer selection and coherence-mask cutoff changes retain full data updates.
+
+
 ## 2026-09-22 — public viewer update and documentation review
 
 - Published the validated eight-site display rebuild to the existing GitHub Pages

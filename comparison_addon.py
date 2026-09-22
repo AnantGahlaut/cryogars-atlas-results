@@ -19,7 +19,8 @@ ROOT=Path(__file__).resolve().parent
 MARKER='\n<!-- SnowEx comparison addon v1 -->\n'
 BRIDGE_START='// BEGIN SnowEx comparison bridge v1\n'
 BRIDGE_END='// END SnowEx comparison bridge v1\n'
-HOOK='(function spin(){draw();requestAnimationFrame(spin);})();'
+HOOK='draw(); // Start on-demand rendering.'
+LEGACY_HOOK='(function spin(){draw();requestAnimationFrame(spin);})();'
 PAYLOAD=re.compile(r'<script id="payload" type="application/json">(.*?)</script>',re.S)
 
 
@@ -47,10 +48,12 @@ def script(name,text):
 
 def append_comparison(html):
     base=remove_comparison(html)
-    if base.count(HOOK)!=1 or len(PAYLOAD.findall(base))!=1:
+    hooks=[hook for hook in (HOOK,LEGACY_HOOK) if hook in base]
+    if len(hooks)!=1 or base.count(hooks[0])!=1 or len(PAYLOAD.findall(base))!=1:
         raise ValueError('Expected one stable viewer hook and one payload; nothing changed')
+    hook=hooks[0]
     bridge=(ROOT/'viewer_compare/bridge.js').read_text(encoding='utf-8')
-    injected=base.replace(HOOK,BRIDGE_START+bridge+'\n'+BRIDGE_END+HOOK,1)
+    injected=base.replace(hook,BRIDGE_START+bridge+'\n'+BRIDGE_END+hook,1)
     addon=(ROOT/'viewer_compare/panel.html').read_text(encoding='utf-8')+'\n'
     vendor=ROOT/'assets/vendor'
     for name,filename,license_file in [('geotiff','geotiff-2.1.3.js','geotiff-LICENSE'),('proj4','proj4-2.12.1.js','proj4-LICENSE.md')]:

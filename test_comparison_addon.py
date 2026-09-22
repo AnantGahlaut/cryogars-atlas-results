@@ -25,6 +25,17 @@ class ComparisonTests(unittest.TestCase):
         first=append_comparison(fixture())
         self.assertEqual(append_comparison(first),first)
 
+    def test_on_demand_viewer_preserves_boot_and_round_trips(self):
+        source=fixture().replace('(function spin(){draw();requestAnimationFrame(spin);})();',
+                                 'draw(); // Start on-demand rendering.')
+        after=append_comparison(source)
+        self.assertEqual(remove_comparison(after),source)
+        self.assertEqual(append_comparison(after),after)
+
+    def test_mixed_legacy_and_on_demand_hooks_refuses_to_guess(self):
+        with self.assertRaises(ValueError):
+            append_comparison(fixture()+'\ndraw(); // Start on-demand rendering.')
+
     def test_actual_scripts_parse_in_composed_page(self):
         from comparison_addon import validate
         with tempfile.TemporaryDirectory() as directory:

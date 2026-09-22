@@ -22,7 +22,7 @@ const PREF={ranges:{},rangeModes:{},palettes:{},reverse:{},customs:{},typeActive
 const scope=vm.createContext({$,PREF,document:{createElement:element},console,atob,
   P:{arrays:{},tree:[]},G:{full:[1,1],res_m:3,cell_m:3,origin:[0,0],pixel:[3,-3],dem_valid_fraction:.5},W:101,H:1,DEM:'dem',
   levels:[{w:101,h:1,cell:3}],curLevel:0,glOn:true,elev:new Float32Array(101).fill(100),
-  opts:{colors:'smooth'},cellRendered:[null,null],syncCellColors:noop,
+  opts:{colors:'smooth'},cellRendered:[null,null],syncCellColors:noop,pauseRendering:noop,
   nodeAt:p=>scope.P.tree.find(n=>n.path===p),
   DOM:{lidar:{c:'teal',n:'Lidar'},meta:{c:'gray',n:'Metadata'},amp:{c:'gold',n:'Amplitude'}},
   bVal:{},bVal2:{},U:new Proxy({},{get:(_,k)=>k}),
@@ -113,6 +113,11 @@ assert.doesNotMatch(originalInfo,/relative to DEM|coverage|shared cells/);
 run('setInfo(false)');assert.equal($('info').style.display,'none');$('reopen').onclick();assert.equal($('info').style.display,'');
 
 let total=0,sites=0;
+// This pass checks every site's metadata. Numerical shown-grid validity is
+// exercised above and in check_cell_controls; decoding every product again
+// would turn these metadata assertions into hundreds of millions of cell reads.
+const liveShownResolution=scope.syncShownResolution;
+scope.syncShownResolution=noop;
 for(const file of fs.readdirSync(path.join(root,'viewer')).filter(f=>f.endsWith('_explorer.html'))){
   const page=fs.readFileSync(path.join(root,'viewer',file),'utf8');
   scope.P=JSON.parse(page.match(/<script id="payload" type="application\/json">([\s\S]*?)<\/script>/)[1]);
@@ -131,6 +136,7 @@ for(const file of fs.readdirSync(path.join(root,'viewer')).filter(f=>f.endsWith(
   scope.node={path:'parent',kids:new Map([['child',{path:'parent/no-such-layer',kids:new Map()}]])};
   assert.equal(run('matches(node)'),true,'parents of matching descendants remain visible');sites++;
 }
+scope.syncShownResolution=liveShownResolution;
 run('renderTabs()');
 assert.equal($('tabs').children.length,4,'current pinned DEM, timeline, details and settings');
 assert.deepEqual($('tabs').children.slice(0,3).map(x=>x.innerHTML),[

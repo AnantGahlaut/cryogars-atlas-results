@@ -825,7 +825,7 @@
   <span>LAYERS <b id="sV">&mdash;</b></span>
   <span class="sp">drag orbit &middot; shift-drag pan &middot; wheel zoom &middot;
     <kbd>W</kbd> wire &middot; <kbd>R</kbd> reset &middot; <kbd>I</kbd> info</span>
-  <span><b id="sFps">&mdash;</b> fps</span>
+  <span title="Rendered frames per second while updating. An unchanged scene stays idle."><b id="sFps">idle</b><span id="sFpsUnit"></span></span>
   <span>BUILT <b id="sB">&mdash;</b></span>
 </div>
 
@@ -1495,13 +1495,15 @@ function syncCellColors(){
     "One averaged color per "+lv.cell.toLocaleString()+" m block. Updates with Detail; overlay opacity still applies.":"Smooth blends neighboring values.";
   syncShownResolution();
 }
-function setPrimary(k,syncEditor=true){
+function setPrimary(k,syncEditor=true,styleOnly=false){
   if(!P.arrays[k])return;
   primKey=k; const L=P.arrays[k], d=DOM[L.domain]||DOM.meta;
   const cmap=layerCmap(k);
   const [lo,hi]=layerRange(k);
-  gl.bindBuffer(gl.ARRAY_BUFFER,bVal);
-  gl.bufferData(gl.ARRAY_BUFFER,toGL(floats(k)),gl.DYNAMIC_DRAW);
+  if(!styleOnly){
+    gl.bindBuffer(gl.ARRAY_BUFFER,bVal);
+    gl.bufferData(gl.ARRAY_BUFFER,toGL(floats(k)),gl.DYNAMIC_DRAW);
+  }
   gl.uniform1i(U.uCmap,CM[cmap]||0);
   gl.uniform1i(U.uReverse,layerReverse(k));
   gl.uniform1i(U.uDiverging,isDiverging(k)?1:0);
@@ -1526,21 +1528,21 @@ function setPrimary(k,syncEditor=true){
   }else{$("t0").textContent=fmt(lo);$("t1").textContent=fmt((lo+hi)/2);
     $("t2").textContent=fmt(hi);}
   syncRangeStatus(k);
-  renderInfo(k);
-  syncCellColors();
-  syncPaletteSettings();
+  if(!styleOnly){renderInfo(k);syncCellColors();syncPaletteSettings();}
   if(syncEditor)syncLegendEditor();
   draw();
 }
-function setOverlay(k){
+function setOverlay(k,styleOnly=false){
   const on=k&&k!=="__none__"; ovKey=on?k:null;
   $("op").disabled=!on;
   if(!on){gl.uniform1f(U.uOpacity,0);gl.uniform1i(U.uAngleKind2,0);gl.uniform1i(U.uMaskBinary2,0);syncCellColors();syncPaletteSettings();draw();return;}
   const L=P.arrays[k];
   const cmap=layerCmap(k);
   const [lo,hi]=layerRange(k);
-  gl.bindBuffer(gl.ARRAY_BUFFER,bVal2);
-  gl.bufferData(gl.ARRAY_BUFFER,toGL(floats(k)),gl.DYNAMIC_DRAW);
+  if(!styleOnly){
+    gl.bindBuffer(gl.ARRAY_BUFFER,bVal2);
+    gl.bufferData(gl.ARRAY_BUFFER,toGL(floats(k)),gl.DYNAMIC_DRAW);
+  }
   gl.uniform1i(U.uCmap2,CM[cmap]||0);
   gl.uniform1i(U.uReverse2,layerReverse(k));
   gl.uniform1i(U.uDiverging2,isDiverging(k)?1:0);
@@ -1549,9 +1551,16 @@ function setOverlay(k){
   applyCustomUniforms(k,true);
   gl.uniform1f(U.uLo2,lo);gl.uniform1f(U.uHi2,hi);
   gl.uniform1f(U.uOpacity,+$("op").value/100);
-  syncCellColors();
-  syncPaletteSettings();
+  if(!styleOnly){syncCellColors();syncPaletteSettings();}
   draw();
+}
+// Palette/range edits change uniforms, not the uploaded scientific values.
+// Keep the full setters for layer selection, mask cutoffs and replacement data.
+function refreshLayerStyle(k,syncEditor=true){
+  if(!k)return;
+  if(k===primKey)setPrimary(k,syncEditor,true);
+  if(k===ovKey)setOverlay(k,true);
+  if(syncEditor)syncPaletteSettings();
 }
 
 /* ================= info card ================= */
@@ -1692,9 +1701,36 @@ new MutationObserver(()=>{
 }).observe($("info"),{attributes:true,attributeFilter:["style"]});
 
 /* ================= render ================= */
-let frames=0,fpsT=performance.now(),glOn=true;
+let frames=0,fpsT=null,glOn=true;
+let queuedFrame=0,renderingFrame=false,idleTimer=0;
+function frameStatus(value){
+  $("sFps").textContent=String(value);
+  $("sFpsUnit").textContent=typeof value==="number"?" fps":"";
+  $("sFps").setAttribute("aria-label",typeof value==="number"?value+" rendered frames per second":
+    value==="idle"?"Idle: scene unchanged":"Measuring rendering rate");
+}
+function idleFrames(){
+  if(queuedFrame)return; // A requested frame delayed by work is a real stall.
+  frames=0;fpsT=null;frameStatus("idle");
+}
+function pauseRendering(){
+  if(queuedFrame)cancelAnimationFrame(queuedFrame);
+  queuedFrame=0;clearTimeout(idleTimer);idleFrames();
+}
 function draw(){
-  if(!glOn)return;
+  if(!glOn||document.hidden){pauseRendering();return;}
+  if(!renderingFrame){
+    clearTimeout(idleTimer);
+    if(!queuedFrame){
+      if(fpsT===null){fpsT=performance.now();frameStatus("…");}
+      queuedFrame=requestAnimationFrame(()=>{
+        queuedFrame=0;renderingFrame=true;
+        // Resolve draw at frame time so the comparison bridge runs just before rendering.
+        try{draw();}finally{renderingFrame=false;idleTimer=setTimeout(idleFrames,500);}
+      });
+    }
+    return;
+  }
   const dpr=Math.min(window.devicePixelRatio||1,2);
   const w=Math.round(canvas.clientWidth*dpr),h=Math.round(canvas.clientHeight*dpr);
   if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
@@ -1730,9 +1766,11 @@ function draw(){
   drawPits();
   frames++;
   const now=performance.now();
-  if(now-fpsT>500){$("sFps").textContent=Math.round(frames*1000/(now-fpsT));
+  if(now-fpsT>500){frameStatus(Math.round(frames*1000/(now-fpsT)));
     frames=0;fpsT=now;}
 }
+document.addEventListener("visibilitychange",()=>{pauseRendering();if(!document.hidden)draw();});
+if(typeof ResizeObserver!=="undefined")new ResizeObserver(draw).observe(canvas);
 
 /* ================= probe ================= */
 function sampleH(x,z){
@@ -1876,6 +1914,7 @@ function activate(id){
   const det=t.kind==="details", tl=t.kind==="timeline";
   const flat=det||tl;                       // panels that replace the 3D scene
   glOn=!flat;
+  if(flat)pauseRendering();
   if(flat)closeLegendEditor();
   $("details").classList.toggle("on",det);
   $("timeline").classList.toggle("on",tl);
@@ -2397,9 +2436,8 @@ function clearLayerColoursForType(type){
   keys.forEach(k=>{if(productKind(k)===type){delete PREF.palettes[k];delete PREF.customs[k];}});
 }
 function refreshColourType(type){
-  if(primKey&&productKind(primKey)===type)setPrimary(primKey);
-  if(ovKey&&productKind(ovKey)===type)setOverlay(ovKey);
-  syncPaletteSettings();
+  for(const k of new Set([primKey,ovKey]))
+    if(k&&productKind(k)===type)refreshLayerStyle(k);
 }
 function activateTypePreset(k,id){
   const type=productKind(k),preset=PREF.savedPalettes[id];
@@ -2481,15 +2519,15 @@ function changePalette(key,value){
     }else PREF.palettes[key]=value;
   }
   savePrefs();
-  if(key===primKey)setPrimary(key);
-  if(key===ovKey)setOverlay(key);
+  refreshLayerStyle(key);
 }
 $("setPrimaryPalette").onchange=e=>changePalette(primKey,e.target.value);
 $("setOverlayPalette").onchange=e=>changePalette(ovKey,e.target.value);
 $("settingsReset").onclick=()=>{
   PREF=freshPrefs();
   savePrefs();applyUiPrefs(true);
-  if(primKey)setPrimary(primKey);if(ovKey)setOverlay(ovKey);syncSettingsUi();
+  for(const k of new Set([primKey,ovKey]))refreshLayerStyle(k);
+  syncSettingsUi();
 };
 window.addEventListener("keydown",e=>{if(e.key==="Escape")closeSettings();});
 
@@ -2616,7 +2654,7 @@ function editTypePreset(k,id){
   const preset=PREF.savedPalettes[id];if(!preset||preset.type!==productKind(k))return;
   editingPreset={key:k,id};deleteConfirmId=null;
   PREF.customs[k]=clonePaletteConfig(preset);PREF.palettes[k]="__custom__";
-  savePrefs();setPrimary(k);
+  savePrefs();refreshLayerStyle(k);
 }
 function deleteTypePreset(k,id){
   const preset=PREF.savedPalettes[id];if(!preset||preset.type!==productKind(k))return;
@@ -2705,7 +2743,7 @@ function renderCustomEditor(){
 }
 function saveCustomLive(rerender=false){
   if(!primKey)return;
-  PREF.palettes[primKey]="__custom__";savePrefs();setPrimary(primKey,false);
+  PREF.palettes[primKey]="__custom__";savePrefs();refreshLayerStyle(primKey,false);
   const ramp=$("leCustomRamp");if(ramp)ramp.style.background=customRampCss(primKey);
   if(rerender)renderCustomEditor();
 }
@@ -2714,7 +2752,7 @@ $("leCustomize").onclick=()=>{
   editingPreset=null;deleteConfirmId=null;
   if(!PREF.customs[primKey])makeCustomPalette(primKey);
   else PREF.palettes[primKey]="__custom__";
-  savePrefs();setPrimary(primKey);
+  savePrefs();refreshLayerStyle(primKey);
 };
 $("leCustomEditor").oninput=e=>{
   if(!primKey||!PREF.customs[primKey])return;
@@ -2745,7 +2783,7 @@ $("leCustomEditor").onclick=e=>{
   }
   if(e.target.closest("#leCancelTypeEdit")){
     editingPreset=null;delete PREF.customs[primKey];delete PREF.palettes[primKey];
-    savePrefs();setPrimary(primKey);return;
+    savePrefs();refreshLayerStyle(primKey);return;
   }
   if(e.target.closest("#leSaveTypeNew")){
     const input=$("lePresetName");saveTypePalette(primKey,input&&input.value.trim()||input&&input.placeholder,true);return;
@@ -2815,7 +2853,7 @@ function setLayerRange(k,r,mode="custom"){
   if(isDiverging(k)){
     const m=Math.max(Math.abs(r[0]),Math.abs(r[1]));r=[-m,m];
   }
-  PREF.ranges[k]=r;PREF.rangeModes[k]=mode;savePrefs();setPrimary(k);return true;
+  PREF.ranges[k]=r;PREF.rangeModes[k]=mode;savePrefs();refreshLayerStyle(k);return true;
 }
 $("legend").onclick=openLegendEditor;
 $("leClose").onclick=closeLegendEditor;
@@ -2823,7 +2861,7 @@ $("lePalette").onchange=e=>changePalette(primKey,e.target.value);
 $("leReverse").onchange=e=>{
   if(!primKey)return;
   if(e.target.checked)PREF.reverse[primKey]=true;else delete PREF.reverse[primKey];
-  savePrefs();setPrimary(primKey);
+  savePrefs();refreshLayerStyle(primKey);
 };
 const applyManualRange=()=>{
   if(!setLayerRange(primKey,[parseFloat($("leMin").value),parseFloat($("leMax").value)]))
@@ -2840,13 +2878,13 @@ $("legendEditor").querySelector(".le-presets").onclick=e=>{
     const r=PREF.ranges[primKey],m=Math.max(Math.abs(r[0]),Math.abs(r[1]));
     PREF.ranges[primKey]=[-m,m];
   }
-  savePrefs();setPrimary(primKey);
+  savePrefs();refreshLayerStyle(primKey);
 };
 $("leReset").onclick=()=>{
   if(!primKey)return;
   delete PREF.palettes[primKey];delete PREF.ranges[primKey];delete PREF.reverse[primKey];
   delete PREF.rangeModes[primKey];delete PREF.customs[primKey];
-  savePrefs();setPrimary(primKey);
+  savePrefs();refreshLayerStyle(primKey);
 };
 window.addEventListener("keydown",e=>{
   if(e.key!=="Escape")return;
@@ -2952,6 +2990,6 @@ applyUiPrefs(true);
 sel=DEM;
 renderTree();
 activate("dem");
-(function spin(){draw();requestAnimationFrame(spin);})();
+draw(); // Start on-demand rendering.
 })();
 </script>
