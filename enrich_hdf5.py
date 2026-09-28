@@ -171,6 +171,8 @@ def cached_annotation(session, url: str, cache: Path) -> dict:
     key = re.sub(r"[^A-Za-z0-9_.-]", "_", url.rsplit("/", 1)[-1])
     raw = cache / (key + ".ann")
     if not raw.exists():
+        if session is None:
+            raise RuntimeError(f"{raw.name} not cached and running offline")
         log.info("    fetching annotation (range request)")
         raw.write_text(fetch_annotation(session, url), encoding="utf-8")
     before = raw.read_bytes()
@@ -1084,7 +1086,9 @@ def enrich(path, out, cache, session=None, with_insitu=False) -> int:
                     if "source_url" in f[sg].attrs:
                         url = f[sg].attrs["source_url"]
                         break
-                if url is None or session is None:
+                # Offline runs (no session) still use cached annotations;
+                # only an uncached one is skipped, with a warning below.
+                if url is None:
                     continue
                 url = url.decode() if isinstance(url, bytes) else str(url)
                 try:
@@ -1283,7 +1287,8 @@ def main(argv=None) -> int:
     ap.add_argument("--cache", type=Path, default=here / "ann_cache")
     ap.add_argument("--suffix", default=".enriched")
     ap.add_argument("--no-network", action="store_true",
-                    help="skip annotation harvest; terrain layers only")
+                    help="no ASF session; radar geometry uses cached "
+                         "annotations only and skips uncached ones")
     ap.add_argument("--with-insitu", action="store_true",
                     help="carry snow pits and GPR transects into the enriched "
                          "copy; omitted by default in v1")
@@ -1308,7 +1313,7 @@ def main(argv=None) -> int:
             import build_hdf5 as B
             session = B.asf_session()
         except Exception as exc:                               # noqa: BLE001
-            log.warning("no ASF session (%s); annotations skipped", exc)
+            log.warning("no ASF session (%s); using cached annotations only", exc)
 
     rc = 0
     for s in sites:

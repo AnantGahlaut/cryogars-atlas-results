@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software or the SnowEx Field Atlas archive, please cite it as
+  below, and also cite the original NASA SnowEx, UAVSAR, NSIDC, ASF and ORNL
+  datasets for the sites, dates and products you used.
+type: software
+title: "SnowEx Field Atlas: aligned LiDAR and UAVSAR archives and site explorers"
+version: "1.0.05"
+authors:
+  - given-names: Anant
+    family-names: Gahlaut
+    affiliation: "CryoGARS, Boise State University"
+contact:
+  - given-names: Hans-Peter
+    family-names: Marshall
+    affiliation: "CryoGARS, Boise State University"
+repository-code: "https://github.com/AnantGahlaut/cryogars-atlas"
+url: "https://anantgahlaut.github.io/cryogars-atlas-viewer/"
+license: MIT
+keywords:
+  - SnowEx
+  - LiDAR
+  - UAVSAR
+  - InSAR
+  - snow depth
+  - HDF5

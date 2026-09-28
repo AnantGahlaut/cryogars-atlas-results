@@ -18,6 +18,13 @@ class AnnotationLineageTests(unittest.TestCase):
             self.assertEqual(ann['_snowex_annotation_source']['sha256'], hashlib.sha256(raw.read_bytes()).hexdigest())
             self.assertEqual(E.annotation_scalars(ann), {'radar_look_direction': 'Left', 'peg_heading_deg': 52.})
 
+    def test_offline_cache_miss_raises_without_fetching(self):
+        with tempfile.TemporaryDirectory() as td:
+            with patch.object(E, 'fetch_annotation') as fetch:
+                with self.assertRaisesRegex(RuntimeError, 'offline'):
+                    E.cached_annotation(None, 'https://fixture.invalid/missing.zip', Path(td))
+            fetch.assert_not_called()
+
     def test_cache_change_during_parse_is_not_given_a_false_digest(self):
         with tempfile.TemporaryDirectory() as td:
             cache = Path(td)
