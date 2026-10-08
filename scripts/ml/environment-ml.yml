@@ -1,0 +1,16 @@
+# Baseline-model environment: the pinned archive environment plus scikit-learn.
+# Built on Borah by cloning `snowex-atlas` (no solve), then:
+#   pip install --only-binary :all: scikit-learn==1.7.2
+# (Borah's glibc and compilers are too old to build pyarrow, so tables are
+# stored as pandas pickles.) Equivalent from scratch:
+name: snowex-ml
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11.15
+  - numpy=2.4.6
+  - h5py=3.16.0
+  - pandas=3.0.3
+  - pip
+  - pip:
+      - scikit-learn==1.7.2
