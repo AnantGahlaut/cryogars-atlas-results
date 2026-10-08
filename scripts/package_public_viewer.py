@@ -16,9 +16,14 @@ SITES = ("banner_summit", "cameron_pass", "dry_creek", "fraser", "grand_mesa",
          "little_cottonwood", "mores_creek", "reynolds_creek")
 PAGES = ("index.html",) + tuple(site + "_explorer.html" for site in SITES)
 SCRIPT = re.compile(r'(<script\b[^>]*>)([\s\S]*?)(</script>)', re.IGNORECASE)
-LOCAL_PATH = re.compile(r'^(?:[A-Za-z]:[/\\]|\\\\|/(?:home|Users|mnt|tmp|opt)/|~/|file:)', re.I)
-LOCAL_IN_TEXT = re.compile(r'(?<![\w:])(?:[A-Za-z]:[\\/]|/(?:home|Users)/|file:///)', re.I)
+# Cluster roots (Boise State Borah) count as local too: pages exported there
+# record home, scratch and shared-storage paths in their lineage.
+LOCAL_PATH = re.compile(r'^(?:[A-Za-z]:[/\\]|\\\\|/(?:home|Users|mnt|tmp|opt|bsuhome|bsuscratch|bsushare)/|~/|file:)', re.I)
+LOCAL_IN_TEXT = re.compile(r'(?<![\w:])(?:[A-Za-z]:[\\/]|/(?:home|Users|bsuhome|bsuscratch|bsushare)/|file:///)', re.I)
 LINEAGE_KEYS = {"build_provenance", "metadata_correction_provenance"}
+#: Archive attributes holding lineage as JSON text. Enrichment 3.3.0 writes
+#: these on the file and on datasets; the explorer shows them in its tree.
+LINEAGE_ATTRS = {"build_provenance_json"}
 
 
 def digest(raw):
@@ -31,12 +36,15 @@ def canonical(value):
 
 
 def redact_path(value, repository):
+    """`repository` is one checkout root or several (e.g. laptop and cluster)."""
     if not LOCAL_PATH.match(value):
         return value
     normalized = value.replace("\\", "/")
-    root = str(repository).replace("\\", "/").rstrip("/") + "/"
-    if normalized.lower().startswith(root.lower()):
-        return "repository/" + normalized[len(root):]
+    roots = repository if isinstance(repository, (list, tuple)) else [repository]
+    for root in roots:
+        root = str(root).replace("\\", "/").rstrip("/") + "/"
+        if normalized.lower().startswith(root.lower()):
+            return "repository/" + normalized[len(root):]
     return "[local]/" + normalized.rstrip("/").rsplit("/", 1)[-1]
 
 
@@ -64,6 +72,35 @@ def redact_lineage(value, repository):
     return result
 
 
+def redact_lineage_attrs(value, repository):
+    """Redact JSON-text lineage attributes wherever they sit in the payload."""
+    if isinstance(value, list):
+        return [redact_lineage_attrs(item, repository) for item in value]
+    if not isinstance(value, dict):
+        return value
+    result = {}
+    for key, item in value.items():
+        if key in LINEAGE_ATTRS and isinstance(item, str):
+            try:
+                parsed = json.loads(item)
+            except ValueError:
+                result[key] = item
+                continue
+            public = redact_lineage(parsed, repository)
+            result[key] = item if public == parsed else json.dumps(public, sort_keys=True)
+        else:
+            result[key] = redact_lineage_attrs(item, repository)
+    return result
+
+
+def without_lineage_attrs(value):
+    if isinstance(value, list):
+        return [without_lineage_attrs(item) for item in value]
+    if isinstance(value, dict):
+        return {k: without_lineage_attrs(v) for k, v in value.items() if k not in LINEAGE_ATTRS}
+    return value
+
+
 def public_page(raw, repository):
     """Replace JSON bodies only; fail on unhandled local paths elsewhere."""
     text = raw.decode("utf-8")
@@ -79,10 +116,12 @@ def public_page(raw, repository):
         if identifier == "render-provenance":
             public = redact_lineage(value, repository)
         elif identifier == "payload":
-            public = {key: redact_lineage(item, repository) if key in LINEAGE_KEYS else item
+            public = {key: redact_lineage(item, repository) if key in LINEAGE_KEYS
+                      else redact_lineage_attrs(item, repository)
                       for key, item in value.items()}
-            assert {k: v for k, v in public.items() if k not in LINEAGE_KEYS} == {
-                k: v for k, v in value.items() if k not in LINEAGE_KEYS}
+            # Everything except lineage must be untouched, scientific arrays included.
+            assert without_lineage_attrs({k: v for k, v in public.items() if k not in LINEAGE_KEYS}) == \
+                without_lineage_attrs({k: v for k, v in value.items() if k not in LINEAGE_KEYS})
         else:
             public = value
         if public == value:
@@ -155,9 +194,12 @@ if __name__ == "__main__":
     parser.add_argument("source", type=Path)
     parser.add_argument("destination", type=Path)
     parser.add_argument("--repository", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--repository-alias", action="append", default=[],
+                        help="another checkout of this repository whose paths appear in "
+                             "lineage, e.g. the cluster copy the pages were exported from")
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
-    result = package(args.source, args.destination, args.repository)
+    result = package(args.source, args.destination, [args.repository, *args.repository_alias])
     args.report.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": result["status"], "pages": len(result["pages"]),
                       "bytes": sum(page["bytes"] for page in result["pages"])}))

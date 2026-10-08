@@ -54,6 +54,37 @@ class PublicViewerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unhandled local path"):
             pack.public_page(raw, "project")
 
+    def test_cluster_paths_are_redacted_with_a_repository_alias(self):
+        record = {"schema": "snowex-build-lineage-v1",
+                  "sources": {"/bsuhome/person/checkout/make_explorer.py": {"sha256": "s"}},
+                  "dependencies": {"executable": "/bsuhome/person/.conda/envs/x/bin/python"},
+                  "inputs": [{"path": "/bsuscratch/person/stage/site.enriched.h5"},
+                             {"path": "/bsushare/lab/SNOWEX/LIDAR/site.h5"}]}
+        public = pack.redact_lineage(record, [r"C:\Users\person\project", "/bsuhome/person/checkout"])
+        self.assertEqual(public["sources"], {"repository/make_explorer.py": {"sha256": "s"}})
+        self.assertEqual(public["dependencies"]["executable"], "[local]/python")
+        self.assertEqual([i["path"] for i in public["inputs"]],
+                         ["[local]/site.enriched.h5", "[local]/site.h5"])
+        raw = b'<script id="payload" type="application/json">{"notes":"/bsuscratch/person/x.h5"}</script>'
+        with self.assertRaisesRegex(ValueError, "Unhandled local path"):
+            pack.public_page(raw, "project")
+
+    def test_archive_lineage_attributes_are_redacted_and_science_kept(self):
+        lineage = json.dumps({"schema": "snowex-build-lineage-v1",
+                              "inputs": [{"path": "/bsuscratch/person/site.h5"}]})
+        payload = {"identification": {"site": "x", "build_provenance_json": lineage},
+                   "tree": [{"path": "/science", "attrs": {"units": "m", "build_provenance_json": lineage}}],
+                   "arrays": {"a": {"b64": "AAAA"}}}
+        raw = ('<script id="payload" type="application/json">' + json.dumps(payload) + "</script>").encode()
+        public, blocks = pack.public_page(raw, "project")
+        out = json.loads(pack.SCRIPT.search(public.decode())[2])
+        self.assertNotIn(b"bsuscratch", public)
+        self.assertEqual(out["arrays"], payload["arrays"])
+        self.assertEqual(out["tree"][0]["attrs"]["units"], "m")
+        attr = json.loads(out["identification"]["build_provenance_json"])
+        self.assertEqual(attr["inputs"][0]["path"], "[local]/site.h5")
+        self.assertEqual(blocks, ["payload"])
+
     def test_path_collisions_are_not_silently_merged(self):
         with self.assertRaisesRegex(ValueError, "collision"):
             pack.redact_lineage({r"D:\a\same.py": 1, r"E:\b\same.py": 2}, "project")
