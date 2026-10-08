@@ -208,6 +208,30 @@ class TestEnrichmentCleaningMetadata(unittest.TestCase):
             self.assertEqual(h5[f"{RADAR_OUTPUT}/HH"].attrs["swath_fill_cells_masked"], 41)
             self.assertEqual(h5[f"{RADAR_OUTPUT}/HH"].attrs["unw_zero_fill_masked"], 1)
 
+    def test_only_an_all_zero_fill_unwrapped_phase_records_an_empty_reason(self):
+        with h5py.File(self.output, "r") as h5:
+            # One masked zero among valid phase, and unmasked zeros, stay unexplained.
+            self.assertNotIn("empty_reason", h5[f"{RADAR_OUTPUT}/HH/unw"].attrs)
+            self.assertNotIn("empty_reason", h5[f"{RADAR_OUTPUT}/HV/unw"].attrs)
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            source, output = directory / "zero.h5", directory / "zero.enriched.h5"
+            with h5py.File(source, "w") as h5:
+                identify(h5)
+                source_array(h5, DEM, np.full(SHAPE, 2000.0, dtype="float32"))
+                for name in ("amp1", "amp2", "cor"):
+                    source_array(h5, f"{RADAR_SOURCE}/HH/{name}",
+                                 np.full(SHAPE, 0.5, dtype="float32"))
+                source_array(h5, f"{RADAR_SOURCE}/HH/unw", np.zeros(SHAPE, dtype="float32"))
+            result, _ = E.enrich(source, output, directory / "cache", session=None)
+            self.assertEqual(result, 0)
+            with h5py.File(output, "r") as h5:
+                attrs = h5[f"{RADAR_OUTPUT}/HH/unw"].attrs
+                self.assertTrue(np.isnan(h5[f"{RADAR_OUTPUT}/HH/unw"][...]).all())
+                self.assertEqual(attrs["empty_reason"], "unwrapper_zero_fill")
+                self.assertEqual(attrs["unw_zero_fill_masked"], SHAPE[0] * SHAPE[1])
+                self.assertEqual(attrs["valid_pixel_count"], 0)
+
     def test_enriched_statistics_describe_only_stored_arrays(self):
         with h5py.File(self.output, "r") as h5:
             paths = [DEM, SNOW, EMPTY_SNOW]

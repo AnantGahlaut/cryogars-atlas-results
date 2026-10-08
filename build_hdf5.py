@@ -2794,6 +2794,30 @@ def configure_gdal_for_earthdata(auth) -> bool:
     global _GDAL_EARTHDATA_READY
     import os
 
+    common = {
+        # Do not list the whole bucket directory just to open one file.
+        "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
+        "GDAL_HTTP_MAX_RETRY": "5",
+        "GDAL_HTTP_RETRY_DELAY": "2",
+        "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif,.TIF,.tiff",
+        "VSI_CACHE": "TRUE",
+        "VSI_CACHE_SIZE": "26214400",
+    }
+    # Preferred: netrc login with a cookie jar, NASA's documented GDAL route.
+    # GDAL 3.12 forwards a bearer header through NSIDC's redirect to its
+    # CloudFront/S3 storage, which rejects it; the netrc route survives that.
+    path = netrc_path()
+    if path is not None:
+        jar = Path.home() / ".cache" / "snowex" / "gdal_earthdata_cookies.txt"
+        jar.parent.mkdir(parents=True, exist_ok=True)
+        os.environ.pop("GDAL_HTTP_HEADERS", None)
+        os.environ.update({**common, "GDAL_HTTP_NETRC": "YES",
+                           "GDAL_HTTP_NETRC_FILE": str(path),
+                           "GDAL_HTTP_COOKIEFILE": str(jar),
+                           "GDAL_HTTP_COOKIEJAR": str(jar)})
+        _GDAL_EARTHDATA_READY = True
+        return True
+
     token = getattr(auth, "token", None)
     access = token.get("access_token") if isinstance(token, dict) else token
     if not access:
@@ -2804,16 +2828,7 @@ def configure_gdal_for_earthdata(auth) -> bool:
     if isinstance(token, dict) and token.get("expiration_date"):
         log.debug("Earthdata token expires %s", token["expiration_date"])
 
-    os.environ.update({
-        "GDAL_HTTP_HEADERS": f"Authorization: Bearer {access}",
-        # Do not list the whole bucket directory just to open one file.
-        "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
-        "GDAL_HTTP_MAX_RETRY": "5",
-        "GDAL_HTTP_RETRY_DELAY": "2",
-        "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif,.TIF,.tiff",
-        "VSI_CACHE": "TRUE",
-        "VSI_CACHE_SIZE": "26214400",
-    })
+    os.environ.update({**common, "GDAL_HTTP_HEADERS": f"Authorization: Bearer {access}"})
     _GDAL_EARTHDATA_READY = True
     return True
 

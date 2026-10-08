@@ -1,9 +1,10 @@
 # SnowEx Field Atlas design
 
-**Review draft · 2026-09-22.** This document connects the data sources to the
-stored products and the numbers and colours in the explorer. It summarizes the
-reviewed implementation and eight-site inventory; it is not a claim that all
-historical processing can be reproduced from today's source.
+**v1.0.05 · updated 2026-10-05.** This document connects the data sources to the
+stored products and the numbers and colours in the explorer. It describes the
+enrichment 3.3.0 archives rebuilt on Borah on 2026-09-28 and the explorers
+exported from them. It is not a claim that all historical processing can be
+reproduced from today's source: the base archives predate forward provenance.
 
 ## 1. Scope and artifact status
 
@@ -14,17 +15,17 @@ trained model, uncertainty map or NISAR product.
 
 | Artifact | Current state |
 | --- | --- |
-| Enrichment source | Version 3.3.0, with corrected aspect, cleaned-input derivatives and viewing geometry. New derived metadata has its own `derived_metadata_version=1.0`. |
-| Existing HDF5 archives | Base product version 0.1.0 and enrichment version 3.0.0. Archive repairs are deferred until verified backup storage is available. |
-| Local explorers | Eight pages rebuilt from those unchanged archives on September 21, with 1,664 layers and the corrected display/notes implementation. |
-| Public website | September 21 bundle published on September 22; index and all eight site pages verified against prepared file hashes. Remains a research preview. |
-| Scientific release | Still pending archive repairs, remaining evidence and final release validation. The project label v1.0.05 is separate from algorithm versions. |
+| Base archives | Product version 0.1.0, unchanged since 2026-08-29. Byte-verified on Borah against the 2026-08-31 manifest (Slurm job 3280352). |
+| Enriched archives | Enrichment 3.3.0, regenerated on Borah 2026-09-28 from the unchanged base files: corrected aspect, cleaned-input derivatives, corrected viewing geometry and `derived_metadata_version=1.0` metadata. They replace the 3.0.0 enriched files, which are not retained. |
+| Archive location | `/bsushare/hpmarshall-shared/SNOWEX/LIDAR` on Boise State's Borah cluster: 16 files (8 base, 8 enriched) with `MANIFEST.json` and `MANIFEST.sha256`. |
+| Explorers | Eight pages exported from the 3.3.0 archives, 1,664 layers. Remains a research preview. |
+| Release label | v1.0.05 is the project label, separate from the product and enrichment algorithm versions. |
 
-The [rebuild record](reviews/2026-09-21-explorer-rebuild.md) documents what was
-installed locally; the [publication record](reviews/2026-09-22-public-viewer-update.md)
-documents the live site. In particular, circular display averaging does not fix the
-historical aspect convention stored in HDF5. A source fix, archive repair, local
-display export and public deployment are separate operations.
+The [3.3.0 rebuild record](reviews/2026-10-05-archive-rebuild-3.3.0.md)
+documents the regeneration, its checks and what changed. Earlier records —
+the [September 21 display rebuild](reviews/2026-09-21-explorer-rebuild.md) and
+[September 22 publication](reviews/2026-09-22-public-viewer-update.md) — describe
+the 3.0.0-era explorers.
 
 ## 2. Sites and source selection
 
@@ -47,7 +48,7 @@ Fine spacing applies to exported terrain/LiDAR; radar colours are coarser.
 
 A radar group is a site/date-pair/flight-line combination, not an independent
 aircraft pass. Grand Mesa contains two campaigns over overlapping ground.
-The existing 16 base/enriched files total about 295.18 GB decimal; the viewer
+The 16 base/enriched files total 289.15 GB decimal (269.29 GiB); the viewer
 contains much smaller derived display arrays.
 
 ### LiDAR source inventory
@@ -155,9 +156,8 @@ See [cleaning details and limitations](scientific-notes.md#enrichment-and-cleani
 ## 4. Product contracts and processing mathematics
 
 Current derivations are implemented in [enrich_hdf5.py](../enrich_hdf5.py).
-New 3.3.0 outputs use their own cleaned DEM/VH bases; historical 3.0.0
-derivatives use the earlier input stage. The table specifies current source and
-explicitly flags where the existing archive differs. Floating missing values
+The 3.3.0 archives derive every product below from the cleaned DEM and VH
+layers stored in the same enriched file, and record that input stage. Floating missing values
 are NaN; native coherence masks use 255, distinct from valid 0 and 1.
 
 | Family (displayed count) | Source / stored meaning and units | Computation and display reduction |
@@ -167,7 +167,7 @@ are NaN; native coherence masks use 255, distinct from valid 0 and 1.
 | Vegetation height (12) | Imported QSI vegetation height, metres | Not recomputed from displayed elevation. Finite block mean; survey/surface epoch matters. |
 | Canopy fraction (12) | VH-based proxy, dimensionless | Count finite VH≥2 m / count finite VH in centered 11×11 cells (33×33 m). Truncated edge window; empty window missing; missing center may still have a fraction. Finite block mean of fractions. |
 | Slope (8) | Derived DEM slope, degrees | `atan(hypot(gx,gy))` converted to degrees. Display averages fine-grid slopes, not slope recalculated from a coarse DEM. |
-| Aspect (8) | Derived downhill grid bearing, degrees clockwise from grid north | Current source: `degrees(atan2(-gx,-gy)) mod 360`; flat/missing is undefined. Historical stored aspect remains north/south reflected. Export now uses circular means of the stored angles. |
+| Aspect (8) | Derived downhill grid bearing, degrees clockwise from grid north | `degrees(atan2(-gx,-gy)) mod 360`; flat/missing is undefined. Checked against an independent DEM-gradient bearing on about 1 million steep Cameron Pass cells: median difference 1.0° (the 3.0.0 archive's reflected aspect differed by 68°). Export uses circular means. |
 | Amplitude 1 (217) | Provider linear amplitude for pass 1 | Imported/aligned/cleaned/masked; finite mean, then P2–P98 packing. No local logarithm or dB conversion. |
 | Amplitude 2 (217) | Provider linear amplitude for pass 2 | Same operations, distinct annotated pass. |
 | Interferogram magnitude (213) | Magnitude of imported complex I; recorded magnitude units (cached annotations identify linear power) | `mean(abs(I))` over finite complex inputs, then P2–P98 packing; not `abs(mean(I))`. |
@@ -193,7 +193,8 @@ finite DEM mean for missing normal-stencil neighbours and masks missing centers.
 The corrected incidence source approximates a straight track through the peg,
 converts geographic heading to grid bearing using projected geodesic endpoints,
 and places the platform at the nearest track point at constant average altitude.
-It retains only the declared look side. Existing geometry predates these repairs.
+It retains only the declared look side. Compared with 3.0.0, median display
+changes were 0.03–0.97° for flat incidence and 0.14–0.96° for local incidence.
 Aircraft altitude reference, time-resolved navigation and terrain/aircraft height
 compatibility remain unverified. Six QSI terrain references are NAVD88/GEOID12b;
 Grand Mesa is WGS84 ellipsoidal; Reynolds' exact reference remains unresolved.
@@ -285,8 +286,8 @@ Source IDs, dates, units, transforms, cleaning metadata and input lineage belong
 with the relevant products. New derived arrays record validated dataset-local
 CRS/transform/spacing, local product identity, exact input path and
 `resampling_method=none`: no new warp occurs during derivation, though the input
-may already have been resampled. The 375 historical derived datasets still lack
-the new SNEX-026 fields.
+may already have been resampled. Every derived dataset in the 3.3.0 archives
+carries these fields; the 375 3.0.0 datasets that lacked them were replaced.
 
 [Build provenance](../build_provenance.py) records forward source identities and
 processing stages; it cannot reconstruct unknown historical commands or software.
@@ -297,23 +298,69 @@ Neither establishes measurement accuracy or scientific fitness.
 
 ## 7. Validation and remaining review
 
-The September 21 rebuild passed 390 offline Python tests, all 1,664 packed-layer
-and notes checks, 856 independent native block samples and 17 page/index checks.
-Existing numerical rendering evidence remains applicable; that rebuild did not
-perform a new visual browser review. [The dated record](reviews/2026-09-21-explorer-rebuild.md)
-states the checks and their limits.
+### 3.3.0 rebuild checks
 
-Before calling the scientific release complete:
+The enrichment ran as one Slurm job per site on Borah
+([scripts/borah](../scripts/borah/)), reading the verified base files through
+symlinks in a staging folder so no job could write into the archive directory.
+Each job recorded the base file's size and modification time before and after.
 
-- Repair and regenerate archived aspect, derivative inputs, geometry and missing
-  metadata only after verified backup storage is available; revalidate outputs.
-- Resolve aircraft height/navigation evidence, Reynolds height reference and Grand
-  Mesa source-spacing/date qualifications; retain uncertainty where unavailable.
-- Review deferred incoming-ASO issues separately; do not add them to current counts.
-- Curate the exhaustive public granule/date/channel appendix and frozen source
-  inventory. The current source cannot prove every historical processing choice.
-- Complete clean-environment and broader browser/accessibility acceptance and
-  final license/citation/archive-distribution decisions.
+- **Environment:** created fresh from `environment.yml`; the install exposed a
+  missing `pandas` dependency, since added. 384 of 393 offline Python tests pass
+  there; the other nine need Node.js, which runs the page checks locally.
+- **Enrichment invariants:** `verify_enriched.py` passed 3,088 checks across the
+  eight sites (Grand Mesa 851). Every base file was unchanged.
+- **Aspect:** independently re-derived, as in §4.
+- **Explorer export:** layer counts are identical to the previous explorers at
+  every site (1,664 in total). All 856 sampled display cells matched values
+  recomputed from the archive within one quantisation step. Node page checks
+  passed for all eight explorers and the index; viewer code is unchanged.
+- **Reproduction:** `get_dataset.py` rebuilt Cameron Pass from NASA into an
+  empty folder; all 259 datasets matched the published files (111 bit-identical,
+  148 within 1e-4 relative after a GDAL upgrade).
+- **Independent audit:** `audit_archive.py` reads every array of all sixteen
+  files. Nineteen unwrapped-phase layers are empty because the provider filled
+  pairs it could not unwrap with zero, which enrichment masks; enrichment now
+  records that reason and the audit verifies it.
+- **Swap:** each enriched file was copied into the archive directory and renamed
+  over its predecessor only after its SHA-256 matched the staged candidate. New
+  manifests were then written and checked with `sha256sum -c`.
 
-This draft is ready for review of the architecture and equations. The remaining
-evidence gaps are explicit; they are not silently filled by a successful rebuild.
+The [rebuild record](reviews/2026-10-05-archive-rebuild-3.3.0.md) lists the
+per-site results and the layer-by-layer differences from 3.0.0. In short, only
+aspect (median 72–89° at every site), flat and local incidence (under 1°), and
+a few edge cells of canopy fraction and slope changed. Snow depth, vegetation
+height, elevation and all radar channels are unchanged.
+
+### Accepted limitations for v1.0.05
+
+These are documented rather than resolved. None changes the stored values; each
+limits how they may be interpreted.
+
+- **Radar geometry is approximate.** Aircraft altitude reference, time-resolved
+  navigation and terrain/aircraft height compatibility are unverified, and no
+  terrain occlusion is modelled. Incidence ≥90° is an angle condition, not a
+  shadow mask.
+- **Vertical references differ.** Six QSI sites are NAVD88/GEOID12b, Grand Mesa
+  is WGS84 ellipsoidal and the Reynolds Creek reference is unresolved; no
+  vertical conversion is applied.
+- **Grand Mesa 2020 snow depth** has an unresolved catalog date (February 1 vs
+  1–2) and native spacing.
+- **Label uncertainty is not established.** There are only ten independent
+  snow-on LiDAR dates archive-wide; Reynolds Creek has none.
+- **Historical lineage is incomplete.** Forward provenance is recorded for 3.3.0;
+  the base archives' exact build commands cannot be reconstructed.
+- **Grand Mesa's measured SWE and snow density are not in the archive.** The
+  builder specifies two SnowEx20 IOP rasters (lidar + GPR, 1 m, covering ~6% of
+  the site), but they were added after the Grand Mesa base file was built. The
+  audit reports them as a known omission; they are the natural first addition
+  to a later release.
+- **Rebuilding relies on ASF's original product URLs.** ASF reorganised UAVSAR
+  in 2026: the zipped products this archive used no longer appear in ASF search,
+  though their recorded URLs still redirect to the files. `get_dataset.py`
+  therefore downloads from a frozen inventory rebuilt from the archives' own
+  records (`snowex_inventory.json`); fresh discovery currently finds no UAVSAR
+  until the builder supports ASF's new per-file layout.
+
+Deferred to later work: incoming ASO packages (SNEX-015–017), an exhaustive
+per-granule appendix, and broader cross-browser and accessibility acceptance.

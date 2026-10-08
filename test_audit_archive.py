@@ -134,6 +134,44 @@ class TestAuditArchive(unittest.TestCase):
         _, audit = self.audit(path, inventory)
         self.assertTrue(any("inventory expects 2" in msg for msg in audit.fail), audit.fail)
 
+    def test_known_v1_omissions_are_noted_not_counted_as_missing(self):
+        path = self.archive(True)
+        self.array(path, DEM, np.ones(SHAPE, "float32"))
+        inventory = {"sites": {"fixture": {"lidar": [{"product": "DEM"},
+                                                     {"product": "SWE", "filename": "swe.tif"},
+                                                     {"product": "DENSITY", "filename": "rho.tif"}],
+                                           "uavsar_needed": []}}}
+        result, audit = self.audit(path, inventory)
+        self.assertEqual(audit.fail, [])
+        self.assertEqual(result["lidar_expected"], 1)
+        self.assertEqual(sum("known omission" in msg for msg in audit.note), 2, audit.note)
+        inventory["sites"]["fixture"]["lidar"].append({"product": "SD"})
+        _, audit = self.audit(path, inventory)
+        self.assertTrue(any("inventory expects 2" in msg for msg in audit.fail), audit.fail)
+
+    def test_unwrapper_zero_fill_explains_an_empty_unwrapped_phase_only(self):
+        unw = "science/UAVSAR/20200212_20200219/LINE/HH/unw"
+        recorded = dict(valid_pixel_count=0, valid_fraction=0., value_stats_stage="stored_array",
+                        value_stats_status="no_valid_values", empty_reason="unwrapper_zero_fill",
+                        unw_zero_mask_status="applied", unw_zero_fill_masked=6)
+        path = self.archive(True)
+        self.array(path, unw, np.full(SHAPE, np.nan, "float32"), **recorded)
+        result, audit = self.audit(path)
+        self.assertEqual(audit.fail, [])
+        self.assertTrue(any("unwrapper_zero_fill" in msg for msg in audit.warn), audit.warn)
+        self.assertEqual(result["stats"][unw.removeprefix("science/")]["empty_reason"], "unwrapper_zero_fill")
+        for index, change in enumerate([{"unw_zero_fill_masked": 0},
+                                        {"unw_zero_mask_status": "skipped_swath_mask_unavailable"}]):
+            with self.subTest(case=index):
+                path = self.archive(True)
+                self.array(path, unw, np.full(SHAPE, np.nan, "float32"), **{**recorded, **change})
+                _, audit = self.audit(path)
+                self.assertTrue(any("unw is entirely nodata" in msg for msg in audit.fail), audit.fail)
+        path = self.archive(True)  # the reason is specific to unwrapped phase
+        self.array(path, MASK.replace("coherence_mask", "cor"), np.full(SHAPE, np.nan, "float32"), **recorded)
+        _, audit = self.audit(path)
+        self.assertTrue(any("cor is entirely nodata" in msg for msg in audit.fail), audit.fail)
+
     def test_enriched_area_is_diagnostic_after_cleaning(self):
         path = self.archive(True)
         self.array(path, DEM, np.array([1, 1, 1, np.nan, np.nan, np.nan], "float32"))

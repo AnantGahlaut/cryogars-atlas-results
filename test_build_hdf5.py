@@ -1716,6 +1716,27 @@ class TestNetrcPath(unittest.TestCase):
     def test_none_when_neither_exists(self):
         self.assertIsNone(B.netrc_path())
 
+    def test_gdal_uses_netrc_and_cookies_when_a_netrc_exists(self):
+        import os
+        from unittest import mock
+        (self.home / "_netrc").write_text(NETRC_BODY, encoding="utf-8")
+        os.environ["GDAL_HTTP_HEADERS"] = "Authorization: Bearer stale"
+        auth = mock.Mock(token={"access_token": "abc"})
+        with mock.patch.object(B.Path, "home", return_value=self.home):
+            self.assertTrue(B.configure_gdal_for_earthdata(auth))
+        self.assertEqual(os.environ["GDAL_HTTP_NETRC"], "YES")
+        self.assertEqual(os.environ["GDAL_HTTP_NETRC_FILE"], str(self.home / "_netrc"))
+        self.assertEqual(os.environ["GDAL_HTTP_COOKIEFILE"], os.environ["GDAL_HTTP_COOKIEJAR"])
+        self.assertNotIn("GDAL_HTTP_HEADERS", os.environ)
+
+    def test_gdal_falls_back_to_a_bearer_header_without_netrc(self):
+        import os
+        from unittest import mock
+        auth = mock.Mock(token={"access_token": "abc"})
+        self.assertTrue(B.configure_gdal_for_earthdata(auth))
+        self.assertEqual(os.environ["GDAL_HTTP_HEADERS"], "Authorization: Bearer abc")
+        self.assertNotIn("GDAL_HTTP_NETRC", os.environ)
+
     def test_netrc_environment_variable_wins(self):
         import os
 

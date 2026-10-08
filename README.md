@@ -12,10 +12,10 @@ Cryosphere, Geophysics and Remote Sensing research lab, Boise State University.
 
 **Research preview · 8 field sites · 1,664 display layers**
 
-Release target: **v1.0.05** · fifth enrichment cycle.
+Release **v1.0.05** · enrichment 3.3.0 · MIT licensed.
 
-[Viewer](#viewer) · [Download the archive](#download-the-archive) ·
-[Work in progress](#work-in-progress)
+[Viewer](#viewer) · [Get the archive](#get-the-archive) ·
+[Status](#status)
 
 ## Viewer
 
@@ -85,7 +85,7 @@ Use the full archive for quantitative modeling. Read the
 [comparison guide and limitations](docs/BROWSER_COMPARISON.md) and
 [scientific notes](docs/scientific-notes.md) before interpreting differences.
 
-The eight explorer pages total approximately **107 MiB**; larger sites can take
+The eight explorer pages total approximately **114 MiB**; larger sites can take
 longer to load. Application code and display data are embedded. Optional Google
 Fonts have local fallbacks.
 
@@ -113,16 +113,33 @@ vegetation, and radar context, but no LiDAR snow-depth labels in this snapshot.
 
 </details>
 
-## Download the archive
+## Get the archive
 
 The full-resolution analysis archive is separate from the browser viewer and
 this source repository. It contains per-site HDF5 files with aligned LiDAR and
 UAVSAR products, a common 3 m grid, temporal match tables, and processing metadata.
 
-**The archive download link has not been published yet.** It will be added here
-with the selected release version, file inventory, sizes, and verified SHA-256
-checksums. The viewer link above is available now; it is not a download of the
-full archive.
+Rather than host about 290 GB, the repository rebuilds the archive from the
+original NASA products into any folder you choose:
+
+```bash
+conda env create -f environment.yml && conda activate snowex-atlas
+python get_dataset.py --dest /path/to/snowex --plan      # sizes only
+python get_dataset.py --dest /path/to/snowex             # all eight sites
+python get_dataset.py --dest /path/to/snowex --sites cameron_pass
+```
+
+It needs a free [NASA Earthdata login](https://urs.earthdata.nasa.gov/) in
+`~/.netrc` (Windows: `~/_netrc`). It downloads the exact granules recorded in the
+v1.0.05 archive (`snowex_inventory.json`), builds `<site>.h5`, enriches it to
+`<site>.enriched.h5`, re-verifies the enrichment and writes SHA-256 manifests.
+Interrupted runs resume. Rebuilt files match the published archive dataset by
+dataset; they are not byte-identical, because HDF5 records creation times and
+software versions.
+
+Grand Mesa alone is about 220 GB; `--plan` reports the space each site needs.
+The CryoGARS lab's verified copy is on Boise State's Borah cluster at
+`/bsushare/hpmarshall-shared/SNOWEX/LIDAR`, with its manifests.
 
 ### What is inside
 
@@ -180,30 +197,31 @@ and building a viewer from an existing archive.
 
 </details>
 
-## Work in progress
+## Status
 
-**Status reviewed: 2026-09-22.** All eight local explorers have been freshly
-exported and validated from the unchanged HDF5 archives. They include the current
-product notes, Cells averaging, validity help, and label/export corrections.
-That bundle is now [published and verified](docs/reviews/2026-09-22-public-viewer-update.md)
-at the existing public URL. The viewer remains a research preview. Archive repairs are deferred until
-verified backup storage is available; the display rebuild does not apply those
-scientific corrections to stored data.
+**v1.0.05, released 2026-10-08.** All eight sites were re-enriched to version
+3.3.0 on Borah from the unchanged, checksum-verified base archives: aspect now
+points downhill (it was reflected north–south), terrain and canopy derivatives
+use the cleaned inputs, radar viewing geometry uses the projected flight
+heading, and every derived dataset carries its grid and lineage metadata. The
+explorers were exported from the corrected archives. Only aspect, the two
+incidence layers and a few canopy/slope edge cells changed; snow depth,
+vegetation height, elevation and all radar channels are unchanged. See the
+[rebuild record](docs/reviews/2026-10-05-archive-rebuild-3.3.0.md).
 
-### Before the next scientific release
+### Known limitations
 
-| Area | Current status and remaining work |
+| Area | Limitation |
 | --- | --- |
-| Corrected archive and viewer | Eight local explorers rebuilt and validated: 1,664 layers and product notes, 856 independent native-block samples, and 390 offline Python tests. Circular display aggregation and label corrections are included. Historical aspect direction, cleaned-input derivatives, geometry and archive metadata still require backed-up archive regeneration. |
-| Radar geometry | Look-side, projected-heading, and summary corrections are implemented. Actual aircraft-height compatibility, some vertical-reference information, and navigation accuracy still need supporting evidence. Incidence remains approximate; full terrain occlusion is not implemented. |
-| Archive download and integrity | Finalize verified backup storage and the distribution files, generate and verify final release manifests, then publish the archive download. Validator and forward-provenance fixes are prepared; historical missing lineage remains explicitly unknown. |
-| Reproducibility and usability | Test installation from a fresh environment, establish portable automated checks, and complete cross-browser, keyboard, palette, comparison/PNG, and memory-limit acceptance. Keep documentation, legend labels, and published versions synchronized. |
-| New ASO observations | Reconcile missing/conflicting georeferencing, survey dates, duplicate products, masks, and modeled-density/SWE lineage before ingestion. These incoming packages are deferred and are not included in the viewer counts above. |
-| Release metadata | Select the code license, finalize citation/contributor metadata, and review dataset attribution and distribution requirements. A later transfer to the CryoGARS organization remains separate. |
+| Labels | Only ten independent snow-on LiDAR dates archive-wide; Reynolds Creek has none. Label uncertainty is not established. |
+| Radar geometry | Incidence is approximate: straight-track, constant-altitude platform; navigation and height compatibility unverified; no terrain occlusion. |
+| Vertical reference | Six sites NAVD88/GEOID12b, Grand Mesa WGS84 ellipsoidal, Reynolds Creek unresolved; no conversion is applied. |
+| Grand Mesa SWE/density | Two measured IOP rasters specified by the builder are not in this release. |
+| Rebuilding | `get_dataset.py` depends on ASF's original UAVSAR URLs, which still redirect after ASF's 2026 reorganisation; fresh catalogue discovery needs a builder update. |
+| Incoming ASO data | Deferred; georeferencing, date, duplicate and SWE-lineage issues must be resolved before ingestion. |
 
-The immediate milestone is a **verified, versioned SnowEx archive with a
-matching public viewer and reproducible download**, retaining the established
-interface.
+The full list, with the reasoning behind each, is in the
+[design document](docs/design.md#accepted-limitations-for-v1005).
 
 ### Longer-term research
 
@@ -219,7 +237,7 @@ validated retrieval model is not included.
 ### Documentation and attribution
 
 [Documentation index](docs/README.md) ·
-[Design document — review draft](docs/design.md) ·
+[Design document](docs/design.md) ·
 [Comparison guide](docs/BROWSER_COMPARISON.md) ·
 [Scientific notes](docs/scientific-notes.md) ·
 [Data sources](docs/data-sources.md) ·
@@ -231,7 +249,8 @@ Observations are provided by the NASA SnowEx community, NASA/JPL UAVSAR, and
 the NSIDC, ASF, and ORNL archives. Cite the original datasets and identify the
 site, dates, subset, and processing version used in your analysis.
 
-**Code license: not yet selected.** Source datasets retain their own attribution
-and use requirements. The development repository,
+**Code license: [MIT](LICENSE).** Cite this software with
+[CITATION.cff](CITATION.cff). Source datasets retain their own attribution and use
+requirements. Developed in the CryoGARS lab with HP Marshall. The development repository,
 [viewer distribution](https://github.com/AnantGahlaut/cryogars-atlas-viewer) and
 [hosted Atlas](https://anantgahlaut.github.io/cryogars-atlas-viewer/) are public.

@@ -49,6 +49,9 @@ REQUIRED_IDENT_ATTRS = (
 
 #: Physically implausible values are present in NASA's published lidar and are
 #: preserved deliberately. They are reported, never treated as failures.
+#: LiDAR products the builder specifies but the v1.0.05 archive does not hold.
+KNOWN_V1_OMISSIONS = {"SWE", "DENSITY"}
+
 PLAUSIBLE = {
     "snow_depth": (-15.0, 20.0),
     "veg_height": (-1.0, 100.0),
@@ -234,6 +237,18 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
             while cursor in empty and cursor not in ancestors:
                 ancestors.add(cursor)
                 cursor = str(empty[cursor].get("derived_from", "")).lstrip("/").removeprefix("science/")
+            # Enrichment masks the provider's exact-zero unwrapper fill. When
+            # that fill was every in-swath cell, the layer is empty by a recorded
+            # step whose count must be positive and consistent with the masking.
+            if (enriched and reason == "unwrapper_zero_fill"
+                    and name.rsplit("/", 1)[-1] == "unw"
+                    and attrs.get("unw_zero_mask_status") == "applied"
+                    and int(attrs.get("unw_zero_fill_masked", 0) or 0) > 0
+                    and attrs.get("valid_pixel_count") == 0):
+                stats[name]["empty_reason"] = reason
+                a.warn.append(f"{key}: {name} is entirely nodata; recorded {reason} "
+                              f"({int(attrs['unw_zero_fill_masked']):,} zero-fill cells masked)")
+                continue
             explained = (
                 enriched and reason == "no_valid_input_cells"
                 and attrs.get("derived_from_archive") == "self"
@@ -309,7 +324,14 @@ def audit_site(path: Path, a: Audit, inventory: dict | None) -> dict:
         # ---- inventory agreement ----------------------------------------
         if inventory and key in inventory.get("sites", {}):
             entry = inventory["sites"][key]
-            expected_lidar = len(entry["lidar"])
+            # Grand Mesa's IOP SWE and density rasters were specified after its
+            # v1.0.05 base archive was built; their absence is a known, documented
+            # omission rather than a silent one.
+            missing_known = [g for g in entry["lidar"] if g.get("product") in KNOWN_V1_OMISSIONS]
+            for g in missing_known:
+                a.note.append(f"{key}: {g.get('product')} {g.get('filename')} not in the v1.0.05 archive "
+                              "(known omission, see docs/design.md)")
+            expected_lidar = len(entry["lidar"]) - len(missing_known)
             got_lidar = sum(1 for n in arrays if n.startswith("LIDAR/")
                             and not n.startswith("LIDAR/DERIVED/"))
             out["lidar_derived_arrays"] = sum(n.startswith("LIDAR/DERIVED/") for n in arrays)

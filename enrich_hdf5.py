@@ -1045,6 +1045,13 @@ def enrich(path, out, cache, session=None, with_insitu=False) -> int:
                         extra.update(range_metadata(leaf, nr))
                         ds = write_grid(pg, leaf, a, chunk, {})
                         inherit_processing(ds, dset, extra, "enrichment_radar")
+                        # The provider fills pairs it could not unwrap with 0.0;
+                        # when that fill was every in-swath cell, say so rather
+                        # than leave an unexplained empty layer.
+                        if (leaf == "unw" and extra.get("unw_zero_mask_status") == "applied"
+                                and extra.get("unw_zero_fill_masked", 0) > 0
+                                and ds.attrs.get("valid_pixel_count") == 0):
+                            ds.attrs["empty_reason"] = "unwrapper_zero_fill"
 
                         if leaf == "cor":
                             # uint8, not float32: this holds three states, and
