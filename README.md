@@ -202,11 +202,14 @@ and building a viewer from an existing archive.
 > This section exists only in the private `cryogars-atlas-results` repository.
 > Do not merge it into the public repository.
 
-**Results explorer:** `/bsushare/hpmarshall-shared/SNOWEX-ML-results/` on Borah
-(readable by the `hpmarshall-shared` group). Each run has its own folder with an
-`index.html`, one `<site>_results_explorer.html` per site, the raw prediction
-GeoTIFFs and a `RESULTS_SUMMARY.txt`. Copy a run folder to your computer (e.g.
-MobaXterm's file panel or `scp -r`) and open `index.html` in a browser.
+**Results site:** `/bsushare/hpmarshall-shared/SNOWEX-ML-results/` on Borah
+(readable by the `hpmarshall-shared` group, about 60 MB). Copy the whole folder to
+your computer (MobaXterm's file panel or `scp -r`) and open **`index.html`**. The
+main page has one section per run — training setup, results across block sizes
+and sites, feature importance, and every prediction — newest first. Each run
+folder holds `run.json`, one `<site>_results_explorer.html` per site and the
+prediction GeoTIFFs. Add a run with `scripts/ml/make_results_index.py record`,
+then rebuild the page with `make_results_index.py index`.
 
 Each results explorer shows the site's terrain and LiDAR snow depth with four
 model layers: gradient-boosting and random-forest predictions, the prediction

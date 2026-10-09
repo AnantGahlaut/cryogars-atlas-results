@@ -14,7 +14,7 @@ opened read-only; nothing is added to the published atlas.
 """
 from __future__ import annotations
 
-import argparse, json, sys, time
+import argparse, json, shutil, sys, time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import rasterio
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from make_explorer import build_site, write_index  # noqa: E402
 
@@ -130,7 +130,7 @@ def main(argv=None) -> int:
         if code:
             print(f"{site}: export failed ({code})"); return code
         page = args.work / "_pages" / f"{site}_explorer.html"
-        page.replace(args.out / f"{site}_results_explorer.html")
+        shutil.move(str(page), str(args.out / f"{site}_results_explorer.html"))  # scratch -> share: different filesystems
         summary["file"] = f"{site}_results_explorer.html"
         summaries.append(summary)
         print(f"{site}: {summary['layers']} layers in {time.time() - t0:.0f}s", flush=True)
