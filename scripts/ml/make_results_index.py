@@ -187,15 +187,16 @@ def importance_panel(run, idx) -> str:
     blocks = []
     for s in scales:
         items = by_scale[s]
-        top = max(i["cm"] for i in items) or 1
+        total = sum(max(i["cm"], 0) for i in items) or 1
+        share = lambda v: max(v, 0) / total          # each input's share of total importance, 0-1
+        top = max(share(i["cm"]) for i in items) or 1
         totals = {}
         for i in items:
             g = "Radar" if i["group"].startswith("Radar") else i["group"]
-            totals[g] = totals.get(g, 0) + max(i["cm"], 0)
-        tmax = max(totals.values()) or 1
+            totals[g] = totals.get(g, 0) + share(i["cm"])
         total_rows = "".join(
-            f'<li><span>{e(g)}</span><span class="bar"><i style="width:{v / tmax * 100:.1f}%"></i></span>'
-            f'<span class="num">{v:.2f} cm</span></li>'
+            f'<li><span>{e(g)}</span><span class="bar"><i style="width:{v * 100:.1f}%"></i></span>'
+            f'<span class="num">{v:.2f}</span></li>'
             for g, v in sorted(totals.items(), key=lambda kv: -kv[1]))
         groups = []
         for g in GROUPS:
@@ -203,16 +204,17 @@ def importance_panel(run, idx) -> str:
             if not rows:
                 continue
             groups.append(f'<h4>{e(g)}</h4><ol class="bars">' + "".join(
-                f'<li><span class="mono">{e(i["feature"])}</span><span class="bar"><i style="width:{max(i["cm"], 0) / top * 100:.1f}%"></i></span>'
-                f'<span class="num">{i["cm"]:.2f} cm</span>'
-                f'<span class="num faint">RF {i.get("random_forest", 0):.2f} · GB {i.get("gradient_boosting", 0):.2f}</span></li>'
+                f'<li><span class="mono">{e(i["feature"])}</span><span class="bar"><i style="width:{share(i["cm"]) / top * 100:.1f}%"></i></span>'
+                f'<span class="num">{share(i["cm"]):.3f}</span>'
+                f'<span class="num faint">{i["cm"]:.2f} cm of RMSE</span></li>'
                 for i in rows) + "</ol>")
         blocks.append(f'<div class="imp-scale" data-scale="{s}"{"" if s == default else " hidden"}>'
-                      f'<h4>Totals by input type</h4><ol class="bars totals">{total_rows}</ol>{"".join(groups)}</div>')
+                      f'<h4>Share by input type</h4><ol class="bars totals">{total_rows}</ol>{"".join(groups)}</div>')
     picker = "".join(f'<button type="button" class="chip" data-imp="{s}" aria-pressed="{str(s == default).lower()}">{s}</button>'
                      for s in scales)
-    return (f'<p class="note">Permutation importance on the held-out sites: how many centimetres the RMSE rises '
-            f'when one input is shuffled. All 31 inputs, averaged over random forest and gradient boosting.</p>'
+    return (f'<p class="note">Each input’s share of the model’s total importance (0–1; all 31 inputs sum to 1). '
+            f'Measured on the held-out sites by shuffling one input and seeing how much the error rises, averaged over '
+            f'random forest and gradient boosting. Bars are scaled to the most important input.</p>'
             f'<div class="chips" role="group" aria-label="Block size">{picker}</div>{"".join(blocks)}')
 
 
@@ -224,14 +226,14 @@ def run_detail(run, n, total) -> str:
     findings = "".join(f"<li>{e(x)}</li>" for x in run.get("findings", []))
     preds = "".join(
         f'<li class="pred-row"><div class="pred-name"><span class="site-number">{i:02}</span>'
-        f'<span class="site-label"><strong>{e(SITE_NAMES.get(p["site"], p["site"]))}</strong>'
+        f'<span class="site-label"><a class="site-link" href="{e(run["id"])}/{e(p["explorer"])}" target="_blank" rel="noopener" title="Open the 3D predictions in a new tab"><strong>{e(SITE_NAMES.get(p["site"], p["site"]))} <span aria-hidden="true">↗</span></strong></a>'
         f'<span>LiDAR {p["date"][:4]}-{p["date"][4:6]}-{p["date"][6:]} · {p["blocks"]:,} blocks at 30 m</span></span></div>'
         f'<dl class="pred-stats"><div><dt>RMSE · RF</dt><dd>{f(p["rf_rmse"])} m</dd></div>'
         f'<div><dt>RMSE · GB</dt><dd>{f(p["gbm_rmse"])} m</dd></div>'
         f'<div><dt>Pattern r</dt><dd>{f(p["corr"])}</dd></div>'
         f'<div><dt>Bias</dt><dd>{f(p["bias"], sign=True)} m</dd></div>'
         f'<div><dt>Bias removed</dt><dd>{f(p["rmse_bias_removed"])} m</dd></div></dl>'
-        f'<div class="pred-actions"><a class="launch small" href="{e(run["id"])}/{e(p["explorer"])}">Open 3D <span aria-hidden="true">↗</span></a>'
+        f'<div class="pred-actions"><a class="launch small" href="{e(run["id"])}/{e(p["explorer"])}" target="_blank" rel="noopener">Open 3D <span aria-hidden="true">↗</span></a>'
         + "".join(f'<a class="tif" href="{e(run["id"])}/{e(t)}" download>GeoTIFF {k}</a>' for k, t in p["tifs"].items())
         + "</div></li>" for i, p in enumerate(run["predictions"], 1))
     scale_rows = "".join(
@@ -350,12 +352,13 @@ figure{margin:0}.chart{width:100%;max-width:760px;height:auto;display:block}
 .pred-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch}
 .launch{display:flex;justify-content:space-between;align-items:center;gap:22px;background:var(--accent);color:#0b2420;text-decoration:none;padding:10px 16px;font-weight:600;transition:background .2s}
 .launch:hover{background:#c0f2df}.launch span{font-size:19px;line-height:1}
+.site-link{text-decoration:none}.site-link:hover strong{color:var(--accent)}
 .tif{font:12px var(--mono);color:var(--muted);text-decoration:none;text-align:right}.tif:hover{color:var(--accent)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 0}
 .chip{border:1px solid var(--line);background:#0d1a1e;color:var(--muted);padding:6px 12px;font:12px var(--mono)}
 .chip[aria-pressed=true]{border-color:var(--accent);color:var(--accent);background:#183331}
 .bars{list-style:none;padding:0;margin:0;max-width:900px}
-.bars li{display:grid;grid-template-columns:200px minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:4px 0;font-size:14px}
+.bars li{display:grid;grid-template-columns:200px minmax(0,1fr) 70px 130px;gap:12px;align-items:center;padding:4px 0;font-size:14px}
 .bars.totals li{grid-template-columns:200px minmax(0,1fr) 80px}
 .bar{background:#14282b;height:10px}.bar i{display:block;height:10px;background:var(--honest)}
 .num{font:13px var(--mono);text-align:right}.faint{color:var(--muted);font-size:11px}
