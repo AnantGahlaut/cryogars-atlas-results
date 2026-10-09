@@ -272,7 +272,7 @@ ol.imp{{list-style:none;padding:0;margin:0;max-width:640px}} ol.imp li{{display:
 </style></head><body><div class="wrap">
 <header class="top"><h1>SnowEx Model Results</h1>
 <p>CryoGARS lab, Boise State University — model runs on the SnowEx Field Atlas v1.0.05.</p>
-<span class="badge">Private · lab use only · not part of the public atlas</span></header>
+<span class="badge">Research results · shared by link · not part of the public SnowEx Field Atlas</span></header>
 <nav aria-label="Runs"><ul>{nav}</ul></nav>
 {"".join(section(r) for r in runs)}
 </div></body></html>'''
