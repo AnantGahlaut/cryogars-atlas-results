@@ -2,7 +2,14 @@
  "id": "baselines-30m-2026-10-08",
  "title": "Random Forest Baseline",
  "date": "2026-10-08",
- "summary": "First honest baseline: random forest (with gradient boosting for comparison) predicting LiDAR snow depth from UAVSAR, terrain and canopy at seven SnowEx sites, each scored on a site the model never saw. It replaces last year's in-sample evaluation and is the reference every later model has to beat.",
+ "summary": "Random forest, with gradient boosting for comparison, predicting LiDAR snow depth from UAVSAR, terrain and canopy at seven SnowEx sites. Each site is scored by models that never saw it. This replaces last year's in-sample evaluation and is the reference every later model has to beat.",
+ "findings": [
+  "Random pixel splits overstate skill, and more so at coarser blocks: R\u00b2 rises from 0.54 to 0.78 the old way while it falls on unseen sites.",
+  "Most error is each site's overall snow amount (bias up to \u00b10.5 m). The spatial pattern is partly captured: correlation 0.5\u20130.75 at Mores Creek, Dry Creek and Banner Summit, about 0.1 at Grand Mesa.",
+  "The models barely use the radar: terrain and canopy carry almost all of the importance, and re-referenced unwrapped phase almost none. One radar pair measures about a week of change, while the labels are absolute depth.",
+  "Elevation does not transfer between sites: at Banner Summit the model over-predicts valleys by 0.3 m and under-predicts ridges, because each site has its own snow-elevation gradient.",
+  "Random forest and gradient boosting are statistically tied, so the extra complexity of boosting is not justified here."
+ ],
  "training": {
   "evaluation": "Leave-one-site-out: each of the 7 labelled sites is predicted by models trained only on the other 6, so every number and map shows generalisation to unseen ground. Reynolds Creek has no snow-depth labels and is not used.",
   "data": "SnowEx Field Atlas v1.0.05 (enrichment 3.3.0) on Borah. One sample = one block of 3 m cells (3, 6, 15, 30, 60 or 99 m; cell means, kept when >=80% of cells have snow depth and radar geometry) x one LiDAR snow-depth date x one UAVSAR interferometric pair within 5 days. 13 LiDAR dates across 7 sites.",
@@ -376,56 +383,1322 @@
    }
   }
  ],
- "importance_30m_cm": [
-  {
-   "feature": "aspect_cos",
-   "cm": 3.89
-  },
-  {
-   "feature": "elevation",
-   "cm": 3.43
-  },
-  {
-   "feature": "slope",
-   "cm": 2.01
-  },
-  {
-   "feature": "aspect_sin",
-   "cm": 1.83
-  },
-  {
-   "feature": "veg_height",
-   "cm": 1.64
-  },
-  {
-   "feature": "canopy_fraction",
-   "cm": 1.44
-  },
-  {
-   "feature": "inc_flat",
-   "cm": 0.26
-  },
-  {
-   "feature": "HV_amp2_db",
-   "cm": 0.25
-  },
-  {
-   "feature": "HH_amp2_db",
-   "cm": 0.23
-  },
-  {
-   "feature": "HV_amp1_db",
-   "cm": 0.23
-  },
-  {
-   "feature": "HH_amp1_db",
-   "cm": 0.07
-  },
-  {
-   "feature": "inc_local",
-   "cm": 0.05
-  }
- ],
+ "importance_cm": {
+  "3m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.5,
+    "random_forest": 3.227,
+    "gradient_boosting": 3.773
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 2.948,
+    "random_forest": 3.007,
+    "gradient_boosting": 2.89
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 2.876,
+    "random_forest": 2.795,
+    "gradient_boosting": 2.957
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.856,
+    "random_forest": 1.525,
+    "gradient_boosting": 2.187
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.675,
+    "random_forest": 1.62,
+    "gradient_boosting": 1.731
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.713,
+    "random_forest": 1.046,
+    "gradient_boosting": 0.379
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.395,
+    "random_forest": 0.24,
+    "gradient_boosting": 0.551
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.253,
+    "random_forest": 0.14,
+    "gradient_boosting": 0.365
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.245,
+    "random_forest": 0.222,
+    "gradient_boosting": 0.268
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.06,
+    "random_forest": 0.087,
+    "gradient_boosting": 0.033
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.059,
+    "random_forest": 0.068,
+    "gradient_boosting": 0.051
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.047,
+    "random_forest": 0.079,
+    "gradient_boosting": 0.014
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.041,
+    "random_forest": 0.024,
+    "gradient_boosting": 0.057
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.013,
+    "random_forest": 0.001,
+    "gradient_boosting": 0.024
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.012,
+    "random_forest": 0.013,
+    "gradient_boosting": 0.011
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.01,
+    "random_forest": -0.011,
+    "gradient_boosting": 0.03
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.01,
+    "random_forest": -0.005,
+    "gradient_boosting": 0.024
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.008,
+    "random_forest": 0.029,
+    "gradient_boosting": -0.013
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.006,
+    "random_forest": 0.007,
+    "gradient_boosting": 0.005
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.005,
+    "random_forest": 0.011,
+    "gradient_boosting": -0.0
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.003,
+    "random_forest": -0.003,
+    "gradient_boosting": 0.008
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.002,
+    "random_forest": -0.004,
+    "gradient_boosting": 0.008
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.001,
+    "random_forest": 0.009,
+    "gradient_boosting": -0.007
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.0,
+    "random_forest": -0.002,
+    "gradient_boosting": 0.003
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.002,
+    "random_forest": -0.007,
+    "gradient_boosting": 0.002
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.008,
+    "random_forest": -0.01,
+    "gradient_boosting": -0.007
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.01,
+    "random_forest": -0.021,
+    "gradient_boosting": 0.0
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.027,
+    "random_forest": 0.068,
+    "gradient_boosting": -0.121
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.028,
+    "random_forest": 0.008,
+    "gradient_boosting": -0.064
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.04,
+    "random_forest": -0.107,
+    "gradient_boosting": 0.027
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.264,
+    "random_forest": -0.287,
+    "gradient_boosting": -0.241
+   }
+  ],
+  "6m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.738,
+    "random_forest": 3.299,
+    "gradient_boosting": 4.176
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 3.172,
+    "random_forest": 2.973,
+    "gradient_boosting": 3.371
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 2.87,
+    "random_forest": 2.845,
+    "gradient_boosting": 2.895
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.837,
+    "random_forest": 1.403,
+    "gradient_boosting": 2.27
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.722,
+    "random_forest": 1.691,
+    "gradient_boosting": 1.753
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.769,
+    "random_forest": 0.913,
+    "gradient_boosting": 0.625
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.284,
+    "random_forest": 0.131,
+    "gradient_boosting": 0.436
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.232,
+    "random_forest": 0.129,
+    "gradient_boosting": 0.336
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.202,
+    "random_forest": 0.13,
+    "gradient_boosting": 0.274
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.175,
+    "random_forest": 0.159,
+    "gradient_boosting": 0.192
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.112,
+    "random_forest": 0.113,
+    "gradient_boosting": 0.111
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.071,
+    "random_forest": 0.132,
+    "gradient_boosting": 0.011
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.035,
+    "random_forest": 0.056,
+    "gradient_boosting": 0.014
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.027,
+    "random_forest": 0.031,
+    "gradient_boosting": 0.023
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.024,
+    "random_forest": 0.023,
+    "gradient_boosting": 0.024
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.021,
+    "random_forest": 0.058,
+    "gradient_boosting": -0.017
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.014,
+    "random_forest": -0.003,
+    "gradient_boosting": 0.031
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.009,
+    "random_forest": 0.011,
+    "gradient_boosting": 0.007
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.007,
+    "random_forest": 0.012,
+    "gradient_boosting": 0.002
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.003,
+    "random_forest": -0.002,
+    "gradient_boosting": 0.009
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.0,
+    "random_forest": -0.008,
+    "gradient_boosting": 0.008
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.0,
+    "random_forest": -0.003,
+    "gradient_boosting": 0.002
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.001,
+    "random_forest": -0.084,
+    "gradient_boosting": 0.082
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.001,
+    "random_forest": -0.011,
+    "gradient_boosting": 0.008
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.001,
+    "random_forest": 0.006,
+    "gradient_boosting": -0.009
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.001,
+    "random_forest": -0.014,
+    "gradient_boosting": 0.011
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.004,
+    "random_forest": -0.01,
+    "gradient_boosting": 0.001
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.008,
+    "random_forest": -0.014,
+    "gradient_boosting": -0.003
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.011,
+    "random_forest": -0.001,
+    "gradient_boosting": -0.021
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.014,
+    "random_forest": -0.024,
+    "gradient_boosting": -0.004
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.27,
+    "random_forest": -0.271,
+    "gradient_boosting": -0.27
+   }
+  ],
+  "15m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.878,
+    "random_forest": 3.464,
+    "gradient_boosting": 4.293
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 3.164,
+    "random_forest": 2.95,
+    "gradient_boosting": 3.377
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 2.597,
+    "random_forest": 2.561,
+    "gradient_boosting": 2.633
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 2.205,
+    "random_forest": 1.499,
+    "gradient_boosting": 2.912
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.737,
+    "random_forest": 1.721,
+    "gradient_boosting": 1.752
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.991,
+    "random_forest": 1.144,
+    "gradient_boosting": 0.838
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.467,
+    "random_forest": 0.185,
+    "gradient_boosting": 0.75
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.26,
+    "random_forest": 0.125,
+    "gradient_boosting": 0.394
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.25,
+    "random_forest": 0.225,
+    "gradient_boosting": 0.275
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.127,
+    "random_forest": 0.092,
+    "gradient_boosting": 0.163
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.061,
+    "random_forest": 0.066,
+    "gradient_boosting": 0.055
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.037,
+    "random_forest": 0.035,
+    "gradient_boosting": 0.039
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.032,
+    "random_forest": -0.012,
+    "gradient_boosting": 0.077
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.021,
+    "random_forest": 0.08,
+    "gradient_boosting": -0.037
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.021,
+    "random_forest": 0.022,
+    "gradient_boosting": 0.021
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.017,
+    "random_forest": 0.017,
+    "gradient_boosting": 0.016
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.016,
+    "random_forest": -0.006,
+    "gradient_boosting": 0.039
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.014,
+    "random_forest": 0.028,
+    "gradient_boosting": 0.001
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.013,
+    "random_forest": 0.002,
+    "gradient_boosting": 0.024
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.009,
+    "random_forest": -0.012,
+    "gradient_boosting": 0.03
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.008,
+    "random_forest": -0.003,
+    "gradient_boosting": 0.02
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.004,
+    "random_forest": -0.007,
+    "gradient_boosting": 0.014
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.004,
+    "random_forest": -0.031,
+    "gradient_boosting": 0.039
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.004,
+    "random_forest": -0.012,
+    "gradient_boosting": 0.019
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.001,
+    "random_forest": -0.0,
+    "gradient_boosting": -0.001
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.003,
+    "random_forest": 0.086,
+    "gradient_boosting": -0.093
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.009,
+    "random_forest": -0.018,
+    "gradient_boosting": -0.0
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.036,
+    "random_forest": -0.044,
+    "gradient_boosting": -0.029
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.041,
+    "random_forest": -0.036,
+    "gradient_boosting": -0.045
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.064,
+    "random_forest": -0.171,
+    "gradient_boosting": 0.042
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.299,
+    "random_forest": -0.329,
+    "gradient_boosting": -0.27
+   }
+  ],
+  "30m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.885,
+    "random_forest": 3.503,
+    "gradient_boosting": 4.268
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 3.431,
+    "random_forest": 3.08,
+    "gradient_boosting": 3.782
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 2.013,
+    "random_forest": 1.42,
+    "gradient_boosting": 2.606
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.825,
+    "random_forest": 1.826,
+    "gradient_boosting": 1.824
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 1.644,
+    "random_forest": 1.788,
+    "gradient_boosting": 1.501
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 1.443,
+    "random_forest": 1.164,
+    "gradient_boosting": 1.721
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.256,
+    "random_forest": 0.058,
+    "gradient_boosting": 0.453
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.246,
+    "random_forest": 0.202,
+    "gradient_boosting": 0.289
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.233,
+    "random_forest": 0.071,
+    "gradient_boosting": 0.394
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.229,
+    "random_forest": 0.187,
+    "gradient_boosting": 0.271
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.075,
+    "random_forest": 0.082,
+    "gradient_boosting": 0.068
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.049,
+    "random_forest": 0.053,
+    "gradient_boosting": 0.046
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.036,
+    "random_forest": 0.043,
+    "gradient_boosting": 0.028
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.015,
+    "random_forest": 0.03,
+    "gradient_boosting": -0.0
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.014,
+    "random_forest": 0.017,
+    "gradient_boosting": 0.012
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.013,
+    "random_forest": 0.008,
+    "gradient_boosting": 0.019
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.011,
+    "random_forest": 0.002,
+    "gradient_boosting": 0.02
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.009,
+    "random_forest": 0.003,
+    "gradient_boosting": 0.015
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.003,
+    "random_forest": 0.002,
+    "gradient_boosting": 0.004
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.003,
+    "random_forest": 0.009,
+    "gradient_boosting": -0.003
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.005,
+    "random_forest": -0.015,
+    "gradient_boosting": 0.006
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.006,
+    "random_forest": -0.009,
+    "gradient_boosting": -0.003
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.009,
+    "random_forest": -0.027,
+    "gradient_boosting": 0.009
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.012,
+    "random_forest": -0.037,
+    "gradient_boosting": 0.012
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.012,
+    "random_forest": -0.022,
+    "gradient_boosting": -0.003
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.016,
+    "random_forest": -0.03,
+    "gradient_boosting": -0.001
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.018,
+    "random_forest": -0.02,
+    "gradient_boosting": -0.016
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.064,
+    "random_forest": -0.08,
+    "gradient_boosting": -0.049
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.067,
+    "random_forest": -0.076,
+    "gradient_boosting": -0.057
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.145,
+    "random_forest": -0.211,
+    "gradient_boosting": -0.08
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.322,
+    "random_forest": -0.364,
+    "gradient_boosting": -0.28
+   }
+  ],
+  "60m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.866,
+    "random_forest": 3.275,
+    "gradient_boosting": 4.458
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 3.777,
+    "random_forest": 3.232,
+    "gradient_boosting": 4.323
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.811,
+    "random_forest": 1.745,
+    "gradient_boosting": 1.877
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.772,
+    "random_forest": 1.296,
+    "gradient_boosting": 2.247
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 1.495,
+    "random_forest": 1.147,
+    "gradient_boosting": 1.842
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 1.4,
+    "random_forest": 1.596,
+    "gradient_boosting": 1.204
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.191,
+    "random_forest": 0.099,
+    "gradient_boosting": 0.284
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.176,
+    "random_forest": 0.057,
+    "gradient_boosting": 0.295
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.117,
+    "random_forest": 0.075,
+    "gradient_boosting": 0.158
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.115,
+    "random_forest": 0.11,
+    "gradient_boosting": 0.12
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.083,
+    "random_forest": 0.039,
+    "gradient_boosting": 0.127
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.079,
+    "random_forest": -0.003,
+    "gradient_boosting": 0.161
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.041,
+    "random_forest": -0.009,
+    "gradient_boosting": 0.091
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.033,
+    "random_forest": 0.12,
+    "gradient_boosting": -0.054
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.021,
+    "random_forest": -0.003,
+    "gradient_boosting": 0.044
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.007,
+    "random_forest": 0.011,
+    "gradient_boosting": 0.003
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.006,
+    "random_forest": -0.028,
+    "gradient_boosting": 0.04
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.005,
+    "random_forest": -0.093,
+    "gradient_boosting": 0.102
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.004,
+    "random_forest": -0.006,
+    "gradient_boosting": 0.014
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.007,
+    "random_forest": -0.01,
+    "gradient_boosting": -0.005
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.008,
+    "random_forest": -0.001,
+    "gradient_boosting": -0.014
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.015,
+    "random_forest": -0.019,
+    "gradient_boosting": -0.01
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.034,
+    "random_forest": 0.053,
+    "gradient_boosting": -0.12
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.037,
+    "random_forest": -0.014,
+    "gradient_boosting": -0.061
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.04,
+    "random_forest": -0.105,
+    "gradient_boosting": 0.025
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.05,
+    "random_forest": -0.073,
+    "gradient_boosting": -0.027
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.065,
+    "random_forest": -0.088,
+    "gradient_boosting": -0.041
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.07,
+    "random_forest": 0.008,
+    "gradient_boosting": -0.148
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.099,
+    "random_forest": -0.235,
+    "gradient_boosting": 0.038
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.12,
+    "random_forest": -0.151,
+    "gradient_boosting": -0.089
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.306,
+    "random_forest": -0.453,
+    "gradient_boosting": -0.159
+   }
+  ],
+  "99m": [
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 3.95,
+    "random_forest": 3.092,
+    "gradient_boosting": 4.809
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.418,
+    "random_forest": 3.02,
+    "gradient_boosting": 3.815
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.642,
+    "random_forest": 1.547,
+    "gradient_boosting": 1.737
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.502,
+    "random_forest": 1.176,
+    "gradient_boosting": 1.829
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 1.476,
+    "random_forest": 1.45,
+    "gradient_boosting": 1.502
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 1.249,
+    "random_forest": 1.029,
+    "gradient_boosting": 1.469
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.218,
+    "random_forest": 0.136,
+    "gradient_boosting": 0.301
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.117,
+    "random_forest": 0.103,
+    "gradient_boosting": 0.131
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.116,
+    "random_forest": 0.103,
+    "gradient_boosting": 0.129
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.093,
+    "random_forest": 0.028,
+    "gradient_boosting": 0.157
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.041,
+    "random_forest": 0.003,
+    "gradient_boosting": 0.079
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.037,
+    "random_forest": -0.027,
+    "gradient_boosting": 0.101
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.03,
+    "random_forest": 0.033,
+    "gradient_boosting": 0.028
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.027,
+    "random_forest": 0.057,
+    "gradient_boosting": -0.003
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.007,
+    "random_forest": -0.01,
+    "gradient_boosting": 0.024
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.007,
+    "random_forest": -0.003,
+    "gradient_boosting": 0.016
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.002,
+    "random_forest": -0.012,
+    "gradient_boosting": 0.016
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.002,
+    "random_forest": -0.004,
+    "gradient_boosting": 0.007
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.0,
+    "random_forest": 0.002,
+    "gradient_boosting": -0.003
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.002,
+    "random_forest": 0.019,
+    "gradient_boosting": -0.022
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.003,
+    "random_forest": -0.004,
+    "gradient_boosting": -0.003
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.008,
+    "random_forest": -0.012,
+    "gradient_boosting": -0.004
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.01,
+    "random_forest": -0.007,
+    "gradient_boosting": -0.014
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.027,
+    "random_forest": -0.087,
+    "gradient_boosting": 0.032
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.062,
+    "random_forest": -0.089,
+    "gradient_boosting": -0.036
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.075,
+    "random_forest": -0.112,
+    "gradient_boosting": -0.038
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.089,
+    "random_forest": -0.137,
+    "gradient_boosting": -0.041
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.109,
+    "random_forest": -0.065,
+    "gradient_boosting": -0.152
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.12,
+    "random_forest": -0.252,
+    "gradient_boosting": 0.012
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.131,
+    "random_forest": -0.186,
+    "gradient_boosting": -0.076
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.407,
+    "random_forest": -0.468,
+    "gradient_boosting": -0.346
+   }
+  ]
+ },
  "predictions": [
   {
    "site": "banner_summit",
