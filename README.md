@@ -197,6 +197,49 @@ and building a viewer from an existing archive.
 
 </details>
 
+## Model results (private, CryoGARS lab)
+
+> This section exists only in the private `cryogars-atlas-results` repository.
+> Do not merge it into the public repository.
+
+**Results explorer:** `/bsushare/hpmarshall-shared/SNOWEX-ML-results/` on Borah
+(readable by the `hpmarshall-shared` group). Each run has its own folder with an
+`index.html`, one `<site>_results_explorer.html` per site, the raw prediction
+GeoTIFFs and a `RESULTS_SUMMARY.txt`. Copy a run folder to your computer (e.g.
+MobaXterm's file panel or `scp -r`) and open `index.html` in a browser.
+
+Each results explorer shows the site's terrain and LiDAR snow depth with four
+model layers: gradient-boosting and random-forest predictions, the prediction
+error (model − LiDAR), and the prediction with the site-wide bias removed. The
+information panels carry the methods, training setup and metrics. Use
+**Compare** with LiDAR snow depth as A and a prediction as B to see B − A on the
+terrain.
+
+### Run `baselines-30m-2026-10-08`
+
+Random forest and gradient boosting, **leave-one-site-out** over the seven
+labelled sites (each site's map comes from models that never saw it), 31
+radar/terrain/canopy features, blocks from 3 to 99 m
+(`scripts/ml/`). Headline findings:
+
+| | 3 m | 30 m | 99 m |
+| --- | ---: | ---: | ---: |
+| Old-style random pixel split, R² | 0.54 | 0.71 | 0.77 |
+| Leave-one-site-out, mean R² | −0.11 | −0.30 | −0.51 |
+| Leave-one-site-out, median R² | 0.12 | 0.09 | 0.06 |
+
+- Random-pixel splits inflate skill, and more so at coarser blocks.
+- Errors are dominated by each site's overall snow amount (bias up to ±0.5 m);
+  the spatial pattern is partly captured (correlation 0.5–0.75 at Mores Creek,
+  Dry Creek and Banner Summit; ~0.1 at Grand Mesa).
+- Terrain and canopy dominate feature importance; radar adds little, and
+  re-referenced unwrapped phase almost nothing. One radar pair measures about a
+  week of change while the labels are absolute depth.
+- Random forest and gradient boosting are statistically tied.
+
+Building the results explorer: `scripts/ml/map_predictions.sbatch` (per-site
+GeoTIFFs), then `scripts/ml/make_results_explorer.py`.
+
 ## Status
 
 **v1.0.05, released 2026-10-08.** All eight sites were re-enriched to version

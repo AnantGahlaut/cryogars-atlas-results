@@ -72,6 +72,9 @@ def main(argv=None) -> int:
     ap.add_argument("archive", type=Path)
     ap.add_argument("out", type=Path)
     ap.add_argument("--block", type=int, default=10, help="cells per block side (3 m cells)")
+    ap.add_argument("--max-rows-per-scene", type=int, default=MAX_ROWS_PER_SCENE,
+                    help="sample cap per scene; 0 keeps every valid block (for maps)")
+    ap.add_argument("--date", default=None, help="only this LiDAR date (YYYYMMDD)")
     args = ap.parse_args(argv)
     k = args.block
     site = args.archive.name.split(".")[0]
@@ -86,6 +89,8 @@ def main(argv=None) -> int:
                          int(r["gap_days"]))
                         for r in rows if r["lidar_product_type"] == "SD" and r["verdict"] == "match"
                         and r["uavsar_level"] == "INTERFEROMETRY_GRD"})
+        if args.date:
+            pairs = [p for p in pairs if p[0] == args.date]
         if not pairs:
             print(f"{site}: no snow-depth/interferogram matches"); return 0
 
@@ -148,8 +153,9 @@ def main(argv=None) -> int:
                 idx = np.flatnonzero(keep.ravel())
                 if idx.size == 0:
                     continue
-                if idx.size > MAX_ROWS_PER_SCENE:
-                    idx = np.sort(rng.choice(idx, MAX_ROWS_PER_SCENE, replace=False))
+                cap = args.max_rows_per_scene
+                if cap and idx.size > cap:
+                    idx = np.sort(rng.choice(idx, cap, replace=False))
                 cols = {"site": site, "lidar_date": lidar_date, "pair": pair, "line": line,
                         "row": rr.ravel()[idx].astype("i4"), "col": cc.ravel()[idx].astype("i4"),
                         "snow_depth": sd.ravel()[idx],

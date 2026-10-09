@@ -76,6 +76,9 @@ CMAP_BY_LEAF = {
     "cor": "viridis",
     "unw": "diverging",
     "amp1": "magma", "amp2": "magma", "amp": "magma",
+    # Model-results editions (scripts/ml/make_results_explorer.py).
+    "predicted_snow_depth_gbm": "blues", "predicted_snow_depth_rf": "blues",
+    "predicted_snow_depth_gbm_debiased": "blues", "snow_depth_error_gbm": "diverging",
 }
 
 #: Fallback readout units when the source has no unit attribute. Blank means
@@ -85,6 +88,8 @@ UNIT_BY_LEAF = {
     "unw": "rad", "cor": "", "amp1": "", "amp2": "",
     "slope": "°", "aspect": "°",
     "incidence_angle_flat": "°", "local_incidence_angle": "°",
+    "predicted_snow_depth_gbm": "m", "predicted_snow_depth_rf": "m",
+    "predicted_snow_depth_gbm_debiased": "m", "snow_depth_error_gbm": "m",
 }
 
 #: Human-readable names. The leaf names are JPL/NSIDC shorthand and mean
@@ -95,6 +100,10 @@ LABEL_BY_LEAF = {
     "unw": "Unwrapped phase", "hgt": "InSAR height",
     "int": "Interferogram", "amp1": "Amplitude, pass 1",
     "amp2": "Amplitude, pass 2", "amp": "Amplitude",
+    "predicted_snow_depth_gbm": "Predicted snow depth (gradient boosting)",
+    "predicted_snow_depth_rf": "Predicted snow depth (random forest)",
+    "predicted_snow_depth_gbm_debiased": "Predicted snow depth, site bias removed",
+    "snow_depth_error_gbm": "Prediction error (model − LiDAR)",
 }
 
 #: Quantities whose distribution is heavily skewed. Radar amplitude and
