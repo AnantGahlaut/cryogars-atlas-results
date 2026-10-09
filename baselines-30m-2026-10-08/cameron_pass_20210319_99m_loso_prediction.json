@@ -1,0 +1,19 @@
+{
+  "site": "cameron_pass",
+  "date": "20210319",
+  "scale": "99m",
+  "blocks": 2114,
+  "radar_scenes_per_block_mean": 5.0,
+  "gbm_rmse": 0.29202143408254055,
+  "gbm_bias": -0.03831910154243534,
+  "gbm_corr": 0.5717751196742082,
+  "gbm_rmse_bias_removed": 0.28949639469086913,
+  "rf_rmse": 0.28808020222292824,
+  "lidar_mean": 1.4167041778564453,
+  "hgb_params": {
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15
+  },
+  "epsg": 6342,
+  "tif": "cameron_pass_20210319_99m_loso_prediction.tif"
+}

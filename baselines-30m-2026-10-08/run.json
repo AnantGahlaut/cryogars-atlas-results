@@ -1,0 +1,543 @@
+{
+ "id": "baselines-30m-2026-10-08",
+ "title": "Random Forest Baseline",
+ "date": "2026-10-08",
+ "summary": "First honest baseline: random forest (with gradient boosting for comparison) predicting LiDAR snow depth from UAVSAR, terrain and canopy at seven SnowEx sites, each scored on a site the model never saw. It replaces last year's in-sample evaluation and is the reference every later model has to beat.",
+ "training": {
+  "evaluation": "Leave-one-site-out: each of the 7 labelled sites is predicted by models trained only on the other 6, so every number and map shows generalisation to unseen ground. Reynolds Creek has no snow-depth labels and is not used.",
+  "data": "SnowEx Field Atlas v1.0.05 (enrichment 3.3.0) on Borah. One sample = one block of 3 m cells (3, 6, 15, 30, 60 or 99 m; cell means, kept when >=80% of cells have snow depth and radar geometry) x one LiDAR snow-depth date x one UAVSAR interferometric pair within 5 days. 13 LiDAR dates across 7 sites.",
+  "features": [
+   "Radar, per polarisation HH / HV / VV: amplitude pass 1 and 2 (dB), amplitude ratio (dB), coherence, unwrapped phase re-referenced to each scene's median, wrapped phase as cos/sin",
+   "Geometry: local and flat incidence angle",
+   "Terrain: elevation, slope, aspect as sin/cos",
+   "Canopy: vegetation height, canopy fraction (nearest vegetation date)",
+   "Timing: radar pair length, LiDAR-radar gap (days)"
+  ],
+  "models": [
+   "Random forest: 300 trees, min_samples_leaf 10, max_features 0.33 (fixed settings)",
+   "Gradient boosting (scikit-learn HistGradientBoosting, 300 iterations, L2 1.0): learning rate 0.05/0.1 and 15/31 leaves chosen by grouped cross-validation over the training sites only"
+  ],
+  "sampling": "Up to 60,000 training rows per site, sites weighted equally so Grand Mesa cannot dominate. The held-out site is never used for fitting, tuning or early stopping.",
+  "reference": "Every model is compared with predicting the training mean; the old evaluation style (random 80/20 pixel split, all sites pooled) is run on the same rows for contrast.",
+  "code": "scripts/ml/ in the private cryogars-atlas-results repository; Slurm jobs on Borah."
+ },
+ "limits": [
+  "Labels are absolute snow depth while one radar pair measures about a week of change, so terrain and canopy dominate these baselines.",
+  "Mean R\u00b2 is pulled down by Fraser (\u2248 \u22122); medians and bias-removed errors give the fuller picture.",
+  "Each block appears once per matched radar pair; prediction maps average those pairs.",
+  "Values are block means of the 3 m archive, not native-resolution radar."
+ ],
+ "scales": [
+  {
+   "scale": "3m",
+   "random_split_r2": 0.5428910714646162,
+   "random_forest:all": {
+    "mean_r2": -0.11297533705494224,
+    "median_r2": 0.1218195016892106,
+    "rmse": 0.6139498341290567,
+    "skill": 0.11657253336727465
+   },
+   "random_forest:no_radar": {
+    "mean_r2": -0.12256267201903226,
+    "median_r2": -0.0435664395857275,
+    "rmse": 0.6212780776970771,
+    "skill": 0.10612373260730676
+   },
+   "random_forest:no_elevation": {
+    "mean_r2": -0.24759760443002235,
+    "median_r2": -0.0199883058426622,
+    "rmse": 0.645450762924939,
+    "skill": 0.06377778020045083
+   },
+   "gradient_boosting:all": {
+    "mean_r2": -0.10802717022059907,
+    "median_r2": 0.1339061235758115,
+    "rmse": 0.6170614202054351,
+    "skill": 0.11528273718135261
+   },
+   "gradient_boosting:no_radar": {
+    "mean_r2": -0.15640311793535128,
+    "median_r2": -0.008469827660694,
+    "rmse": 0.6310163967695488,
+    "skill": 0.09147350013980063
+   },
+   "gradient_boosting:no_elevation": {
+    "mean_r2": -0.2608296466672713,
+    "median_r2": -0.0706671063353974,
+    "rmse": 0.6528057610698389,
+    "skill": 0.05318298968182197
+   }
+  },
+  {
+   "scale": "6m",
+   "random_split_r2": 0.5819643691282589,
+   "random_forest:all": {
+    "mean_r2": -0.16775494522426646,
+    "median_r2": 0.1049175333459447,
+    "rmse": 0.5983886585379291,
+    "skill": 0.10934081580129164
+   },
+   "random_forest:no_radar": {
+    "mean_r2": -0.1668218674557183,
+    "median_r2": -0.061674537370266,
+    "rmse": 0.602460098952606,
+    "skill": 0.10250925896432342
+   },
+   "random_forest:no_elevation": {
+    "mean_r2": -0.29610570212757514,
+    "median_r2": -0.1261334108828344,
+    "rmse": 0.6250911344187637,
+    "skill": 0.06115952780025439
+   },
+   "gradient_boosting:all": {
+    "mean_r2": -0.16233536785111966,
+    "median_r2": 0.1504717943059067,
+    "rmse": 0.5961115916198939,
+    "skill": 0.11372528441496543
+   },
+   "gradient_boosting:no_radar": {
+    "mean_r2": -0.20464875124974302,
+    "median_r2": -0.0405154491675401,
+    "rmse": 0.6108712467967938,
+    "skill": 0.08735646564837338
+   },
+   "gradient_boosting:no_elevation": {
+    "mean_r2": -0.31208387544427524,
+    "median_r2": -0.1430750630490267,
+    "rmse": 0.6327453732803805,
+    "skill": 0.049966602457867944
+   }
+  },
+  {
+   "scale": "15m",
+   "random_split_r2": 0.6456804321675718,
+   "random_forest:all": {
+    "mean_r2": -0.2032619321857485,
+    "median_r2": 0.1148846129996975,
+    "rmse": 0.5601289483587434,
+    "skill": 0.11847243904626097
+   },
+   "random_forest:no_radar": {
+    "mean_r2": -0.2192758663261338,
+    "median_r2": -0.1099817390172248,
+    "rmse": 0.5687016115780714,
+    "skill": 0.10399944965602904
+   },
+   "random_forest:no_elevation": {
+    "mean_r2": -0.3661860502867525,
+    "median_r2": -0.0863883815178094,
+    "rmse": 0.5922564017165708,
+    "skill": 0.059445624179252685
+   },
+   "gradient_boosting:all": {
+    "mean_r2": -0.23398500794881835,
+    "median_r2": 0.1244048844129263,
+    "rmse": 0.5682793433028801,
+    "skill": 0.11042805989002173
+   },
+   "gradient_boosting:no_radar": {
+    "mean_r2": -0.2711882978871844,
+    "median_r2": -0.0502872948406678,
+    "rmse": 0.5804838687086088,
+    "skill": 0.08448108119473388
+   },
+   "gradient_boosting:no_elevation": {
+    "mean_r2": -0.39918145458144794,
+    "median_r2": -0.1053124727033778,
+    "rmse": 0.6008330939773858,
+    "skill": 0.04588225179449092
+   }
+  },
+  {
+   "scale": "30m",
+   "random_split_r2": 0.7101485870817991,
+   "random_forest:all": {
+    "mean_r2": -0.2971805979256108,
+    "median_r2": 0.0928304269020771,
+    "rmse": 0.532139640724393,
+    "skill": 0.12037769538124476
+   },
+   "random_forest:no_radar": {
+    "mean_r2": -0.3218839559842351,
+    "median_r2": -0.1539908643507248,
+    "rmse": 0.5434201927539226,
+    "skill": 0.09920247155887182
+   },
+   "random_forest:no_elevation": {
+    "mean_r2": -0.4561206304701496,
+    "median_r2": -0.0940689736453472,
+    "rmse": 0.5630405800458577,
+    "skill": 0.060698939042043154
+   },
+   "gradient_boosting:all": {
+    "mean_r2": -0.29851881272333003,
+    "median_r2": 0.0475243411509729,
+    "rmse": 0.535109590831932,
+    "skill": 0.11867821547937504
+   },
+   "gradient_boosting:no_radar": {
+    "mean_r2": -0.35787570400013713,
+    "median_r2": -0.1360148094750091,
+    "rmse": 0.5490101283829295,
+    "skill": 0.08599749288687063
+   },
+   "gradient_boosting:no_elevation": {
+    "mean_r2": -0.5167401284993182,
+    "median_r2": -0.1074130544605471,
+    "rmse": 0.5751163981527302,
+    "skill": 0.04108683437843456
+   }
+  },
+  {
+   "scale": "60m",
+   "random_split_r2": 0.7809856620720511,
+   "random_forest:all": {
+    "mean_r2": -0.4059424091930367,
+    "median_r2": 0.0574361154768152,
+    "rmse": 0.4955329836190382,
+    "skill": 0.12214055852388972
+   },
+   "random_forest:no_radar": {
+    "mean_r2": -0.4283806944784541,
+    "median_r2": -0.2087850211820383,
+    "rmse": 0.5061723851772858,
+    "skill": 0.0987130608148622
+   },
+   "random_forest:no_elevation": {
+    "mean_r2": -0.587510336682589,
+    "median_r2": -0.0807471167831055,
+    "rmse": 0.5274273775624806,
+    "skill": 0.05868204621133987
+   },
+   "gradient_boosting:all": {
+    "mean_r2": -0.4403098421531677,
+    "median_r2": -0.0682664892186104,
+    "rmse": 0.5003695187185148,
+    "skill": 0.11461109393878209
+   },
+   "gradient_boosting:no_radar": {
+    "mean_r2": -0.4286968040826837,
+    "median_r2": -0.1744535515125251,
+    "rmse": 0.5071031307884115,
+    "skill": 0.09172923247902996
+   },
+   "gradient_boosting:no_elevation": {
+    "mean_r2": -0.6921958676699383,
+    "median_r2": -0.1585511242136841,
+    "rmse": 0.5466066071708112,
+    "skill": 0.025198010492260312
+   }
+  },
+  {
+   "scale": "99m",
+   "random_split_r2": 0.7662732316849767,
+   "random_forest:all": {
+    "mean_r2": -0.5057158521014629,
+    "median_r2": 0.0563676481769931,
+    "rmse": 0.4730448680120248,
+    "skill": 0.12271322547011153
+   },
+   "random_forest:no_radar": {
+    "mean_r2": -0.5392025400440695,
+    "median_r2": -0.2976720207596008,
+    "rmse": 0.4864698591446824,
+    "skill": 0.09144423600681682
+   },
+   "random_forest:no_elevation": {
+    "mean_r2": -0.6833751394320459,
+    "median_r2": -0.0996170639711471,
+    "rmse": 0.503007861791654,
+    "skill": 0.06014159349835923
+   },
+   "gradient_boosting:all": {
+    "mean_r2": -0.44471070717482514,
+    "median_r2": -0.0500571752889802,
+    "rmse": 0.4656602559924261,
+    "skill": 0.1323848870750702
+   },
+   "gradient_boosting:no_radar": {
+    "mean_r2": -0.5410832652330179,
+    "median_r2": -0.2768233632674008,
+    "rmse": 0.49086071342332815,
+    "skill": 0.07624835526444317
+   },
+   "gradient_boosting:no_elevation": {
+    "mean_r2": -0.7608378273906674,
+    "median_r2": -0.2253658281461328,
+    "rmse": 0.5167168330043036,
+    "skill": 0.030831153256572385
+   }
+  }
+ ],
+ "per_site_30m": [
+  {
+   "site": "banner_summit",
+   "random_forest": {
+    "r2": 0.2005307181833344,
+    "rmse": 0.3775068712154477,
+    "bias": 0.1374376940199783,
+    "baseline_rmse": 0.4476348183734669
+   },
+   "gradient_boosting": {
+    "r2": 0.1643223045876664,
+    "rmse": 0.3859609578930432,
+    "bias": 0.11405966591087,
+    "baseline_rmse": 0.4476348183734669
+   }
+  },
+  {
+   "site": "cameron_pass",
+   "random_forest": {
+    "r2": 0.1726931947426235,
+    "rmse": 0.4079809118633676,
+    "bias": -0.0424560389392616,
+    "baseline_rmse": 0.4531035608121725
+   },
+   "gradient_boosting": {
+    "r2": 0.1500637971005007,
+    "rmse": 0.4135230383029366,
+    "bias": -0.0682054298780749,
+    "baseline_rmse": 0.4531035608121725
+   }
+  },
+  {
+   "site": "dry_creek",
+   "random_forest": {
+    "r2": 0.1150688228069557,
+    "rmse": 0.380376740470971,
+    "bias": 0.2277668199974327,
+    "baseline_rmse": 0.5402282178166551
+   },
+   "gradient_boosting": {
+    "r2": 0.4122867796454459,
+    "rmse": 0.309985896116922,
+    "bias": 0.1201660837594987,
+    "baseline_rmse": 0.5402282178166551
+   }
+  },
+  {
+   "site": "fraser",
+   "random_forest": {
+    "r2": -2.0326146582584914,
+    "rmse": 0.6194194822326259,
+    "bias": 0.5066303242909019,
+    "baseline_rmse": 0.6550283253848469
+   },
+   "gradient_boosting": {
+    "r2": -1.999049265726947,
+    "rmse": 0.615982034589132,
+    "bias": 0.4945431153385078,
+    "baseline_rmse": 0.6550283253848469
+   }
+  },
+  {
+   "site": "grand_mesa",
+   "random_forest": {
+    "r2": -0.216748054506958,
+    "rmse": 0.7659499073154651,
+    "bias": 0.2666777103748862,
+    "baseline_rmse": 0.7088977856461581
+   },
+   "gradient_boosting": {
+    "r2": -0.4214326267960433,
+    "rmse": 0.8278719681717894,
+    "bias": 0.3569150735977247,
+    "baseline_rmse": 0.7088977856461581
+   }
+  },
+  {
+   "site": "little_cottonwood",
+   "random_forest": {
+    "r2": -0.412024635348817,
+    "rmse": 0.7518787414705516,
+    "bias": -0.3803904756129694,
+    "baseline_rmse": 0.8170500288759289
+   },
+   "gradient_boosting": {
+    "r2": -0.4433470190249058,
+    "rmse": 0.760172314761975,
+    "bias": -0.3860116485782681,
+    "baseline_rmse": 0.8170500288759289
+   }
+  },
+  {
+   "site": "mores_creek",
+   "random_forest": {
+    "r2": 0.0928304269020771,
+    "rmse": 0.4218648305023222,
+    "bias": -0.3281360668553597,
+    "baseline_rmse": 0.5527957461484546
+   },
+   "gradient_boosting": {
+    "r2": 0.0475243411509729,
+    "rmse": 0.4322709259877256,
+    "bias": -0.3110201874398434,
+    "baseline_rmse": 0.5527957461484546
+   }
+  }
+ ],
+ "importance_30m_cm": [
+  {
+   "feature": "aspect_cos",
+   "cm": 3.89
+  },
+  {
+   "feature": "elevation",
+   "cm": 3.43
+  },
+  {
+   "feature": "slope",
+   "cm": 2.01
+  },
+  {
+   "feature": "aspect_sin",
+   "cm": 1.83
+  },
+  {
+   "feature": "veg_height",
+   "cm": 1.64
+  },
+  {
+   "feature": "canopy_fraction",
+   "cm": 1.44
+  },
+  {
+   "feature": "inc_flat",
+   "cm": 0.26
+  },
+  {
+   "feature": "HV_amp2_db",
+   "cm": 0.25
+  },
+  {
+   "feature": "HH_amp2_db",
+   "cm": 0.23
+  },
+  {
+   "feature": "HV_amp1_db",
+   "cm": 0.23
+  },
+  {
+   "feature": "HH_amp1_db",
+   "cm": 0.07
+  },
+  {
+   "feature": "inc_local",
+   "cm": 0.05
+  }
+ ],
+ "predictions": [
+  {
+   "site": "banner_summit",
+   "date": "20210315",
+   "blocks": 185165,
+   "explorer": "banner_summit_results_explorer.html",
+   "tifs": {
+    "30 m": "banner_summit_20210315_30m_loso_prediction.tif",
+    "99 m": "banner_summit_20210315_99m_loso_prediction.tif"
+   },
+   "gbm_rmse": 0.3916107713465005,
+   "rf_rmse": 0.3779345010386947,
+   "bias": 0.1695598215246037,
+   "corr": 0.5826025019533158,
+   "rmse_bias_removed": 0.35299926162949036,
+   "lidar_mean": 1.4780691862106323
+  },
+  {
+   "site": "cameron_pass",
+   "date": "20210319",
+   "blocks": 23528,
+   "explorer": "cameron_pass_results_explorer.html",
+   "tifs": {
+    "30 m": "cameron_pass_20210319_30m_loso_prediction.tif",
+    "99 m": "cameron_pass_20210319_99m_loso_prediction.tif"
+   },
+   "gbm_rmse": 0.38586533021178776,
+   "rf_rmse": 0.37259543408633516,
+   "bias": -0.06820545232996311,
+   "corr": 0.5381847641155519,
+   "rmse_bias_removed": 0.3797895106431976,
+   "lidar_mean": 1.4144151210784912
+  },
+  {
+   "site": "dry_creek",
+   "date": "20200219",
+   "blocks": 41742,
+   "explorer": "dry_creek_results_explorer.html",
+   "tifs": {
+    "30 m": "dry_creek_20200219_30m_loso_prediction.tif",
+    "99 m": "dry_creek_20200219_99m_loso_prediction.tif"
+   },
+   "gbm_rmse": 0.3073956800054082,
+   "rf_rmse": 0.3790734652583641,
+   "bias": 0.12016604957004051,
+   "corr": 0.7180888174025515,
+   "rmse_bias_removed": 0.282935003843451,
+   "lidar_mean": 1.0526604652404785
+  },
+  {
+   "site": "fraser",
+   "date": "20210319",
+   "blocks": 69190,
+   "explorer": "fraser_results_explorer.html",
+   "tifs": {
+    "30 m": "fraser_20210319_30m_loso_prediction.tif",
+    "99 m": "fraser_20210319_99m_loso_prediction.tif"
+   },
+   "gbm_rmse": 0.6206904074153209,
+   "rf_rmse": 0.631576087211899,
+   "bias": 0.5046676468207234,
+   "corr": 0.3624164267424424,
+   "rmse_bias_removed": 0.3613407299314176,
+   "lidar_mean": 0.8578992486000061
+  },
+  {
+   "site": "grand_mesa",
+   "date": "20200201",
+   "blocks": 63006,
+   "explorer": "grand_mesa_results_explorer.html",
+   "tifs": {
+    "30 m": "grand_mesa_20200201_30m_loso_prediction.tif",
+    "99 m": "grand_mesa_20200201_99m_loso_prediction.tif"
+   },
+   "gbm_rmse": 0.7142186214079743,
+   "rf_rmse": 0.4015374129542635,
+   "bias": 0.6608523401182942,
+   "corr": 0.31028044139081856,
+   "rmse_bias_removed": 0.2708918107437885,
+   "lidar_mean": 0.9786912798881531
+  },
+  {
+   "site": "little_cottonwood",
+   "date": "20210318",
+   "blocks": 30970,
+   "explorer": "little_cottonwood_results_explorer.html",
+   "tifs": {
+    "30 m": "little_cottonwood_20210318_30m_loso_prediction.tif",
+    "99 m": "little_cottonwood_20210318_99m_loso_prediction.tif"
+   },
+   "gbm_rmse": 0.7433949923566623,
+   "rf_rmse": 0.7241780453793116,
+   "bias": -0.38601166115830976,
+   "corr": 0.2527247017697101,
+   "rmse_bias_removed": 0.6353197004838194,
+   "lidar_mean": 1.8031961917877197
+  },
+  {
+   "site": "mores_creek",
+   "date": "20210315",
+   "blocks": 38319,
+   "explorer": "mores_creek_results_explorer.html",
+   "tifs": {
+    "30 m": "mores_creek_20210315_30m_loso_prediction.tif",
+    "99 m": "mores_creek_20210315_99m_loso_prediction.tif"
+   },
+   "gbm_rmse": 0.40782495234672916,
+   "rf_rmse": 0.40678708028771704,
+   "bias": -0.2837466016423693,
+   "corr": 0.810622687596696,
+   "rmse_bias_removed": 0.29293187181334396,
+   "lidar_mean": 1.6047178506851196
+  }
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  "site": "banner_summit",
+  "date": "20210315",
+  "scale": "99m",
+  "blocks": 16912,
+  "radar_scenes_per_block_mean": 8.0,
+  "gbm_rmse": 0.39303205314850803,
+  "gbm_bias": 0.2206293793437759,
+  "gbm_corr": 0.5813396816418618,
+  "gbm_rmse_bias_removed": 0.3252642807635596,
+  "rf_rmse": 0.35473246543717674,
+  "lidar_mean": 1.4784419536590576,
+  "hgb_params": {
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 31
+  },
+  "epsg": 6340,
+  "tif": "banner_summit_20210315_99m_loso_prediction.tif"
+}

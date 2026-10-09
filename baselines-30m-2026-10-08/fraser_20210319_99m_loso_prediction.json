@@ -1,0 +1,19 @@
+{
+  "site": "fraser",
+  "date": "20210319",
+  "scale": "99m",
+  "blocks": 6276,
+  "radar_scenes_per_block_mean": 4.0,
+  "gbm_rmse": 0.5823854261262197,
+  "gbm_bias": 0.5203922947943169,
+  "gbm_corr": 0.4985885136223311,
+  "gbm_rmse_bias_removed": 0.2614662176404646,
+  "rf_rmse": 0.6141025173817513,
+  "lidar_mean": 0.8571618795394897,
+  "hgb_params": {
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 31
+  },
+  "epsg": 6342,
+  "tif": "fraser_20210319_99m_loso_prediction.tif"
+}
