@@ -1,0 +1,19 @@
+{
+  "site": "little_cottonwood",
+  "date": "20210318",
+  "scale": "30m",
+  "blocks": 30970,
+  "radar_scenes_per_block_mean": 6.0,
+  "gbm_rmse": 0.7695048101070897,
+  "gbm_bias": -0.39959123323026646,
+  "gbm_corr": 0.1958824028351906,
+  "gbm_rmse_bias_removed": 0.6576203381566084,
+  "rf_rmse": 0.7707738655596968,
+  "lidar_mean": 1.8031961917877197,
+  "hgb_params": {
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15
+  },
+  "epsg": 6341,
+  "tif": "little_cottonwood_20210318_30m_loso_prediction.tif"
+}

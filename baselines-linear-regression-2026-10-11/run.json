@@ -1,0 +1,1279 @@
+{
+ "id": "baselines-linear-regression-2026-10-11",
+ "title": "Linear regression",
+ "date": "2026-10-11",
+ "summary": "Ordinary least squares, the simplest model on the ladder. Same data and evaluation as the Random Forest Baseline: each site is scored by a model trained only on the other six, Grand Mesa's 2017 surveys are excluded.",
+ "findings": [
+  "On unseen sites at 30 m the RMSE is 0.58 m, 7% higher than predicting the training sites' mean depth (0.56 m). It beats the mean at 4 of 7 sites.",
+  "Across block sizes the unseen-site RMSE runs from 0.52 to 0.64 m.",
+  "Scored the old way, on a random pixel split, R\u00b2 is 0.34 at 30 m.",
+  "With all 31 inputs, least squares is unstable: each amplitude ratio is exactly amplitude 2 minus amplitude 1, and the fitted model gave errors of thousands of metres at a new site. The three ratio inputs are left out for this model."
+ ],
+ "training": {
+  "evaluation": "Leave-one-site-out: each of the 7 labelled sites is predicted by models trained only on the other 6, so every number and map shows generalisation to unseen ground. Reynolds Creek has no snow-depth labels and is not used.",
+  "data": "SnowEx Field Atlas v1.0.05 (enrichment 3.3.0). One sample = one block of 3 m cells (3, 6, 15, 30, 60 or 99 m; cell means, kept when >=80% of cells have snow depth and radar geometry) x one LiDAR snow-depth date x one UAVSAR interferometric pair within 5 days. 10 site-surveys on 8 LiDAR dates across 7 sites. Grand Mesa's five 2017 surveys are excluded (about 70% of those rows have no canopy input and most of their radar scenes are HH-only), so Grand Mesa is trained and scored on its 2020 survey only.",
+  "features": [
+   "Radar, per polarisation HH / HV / VV: amplitude pass 1 and 2 (dB), amplitude ratio (dB), coherence, unwrapped phase re-referenced to each scene's median, wrapped phase as cos/sin",
+   "Geometry: local and flat incidence angle",
+   "Terrain: elevation, slope, aspect as sin/cos",
+   "Canopy: vegetation height, canopy fraction (nearest vegetation date)",
+   "Timing: radar pair length, LiDAR-radar gap (days)"
+  ],
+  "models": [
+   "Linear regression: ordinary least squares on 28 inputs (the three amplitude ratios are left out because each equals amplitude 2 minus amplitude 1). Missing inputs are filled with the training median; inputs are standardised."
+  ],
+  "sampling": "Up to 60,000 training rows per site, sites weighted equally so Grand Mesa cannot dominate. The held-out site is never used for fitting, tuning or early stopping.",
+  "reference": "Every model is compared with predicting the training mean; the old evaluation style (random 80/20 pixel split, all sites pooled) is run on the same rows for contrast.",
+  "code": "scripts/ml/ in the cryogars-atlas-results repository.",
+  "archive_url": "https://github.com/cryogars/cryogars-atlas/tree/v1.0.05"
+ },
+ "limits": [
+  "Labels are absolute snow depth while one radar pair measures about a week of change, so terrain and canopy dominate these baselines.",
+  "Mean R\u00b2 is not a headline number here. R\u00b2 compares a model with the held-out site's own mean depth, so a site with a narrow range of depths and an error in overall level scores far below zero (Grand Mesa 2020 \u2248 \u221211, Fraser \u2248 \u22122) and dominates the average. RMSE, error vs predicting the mean and median R\u00b2 are reported instead; mean R\u00b2 is listed in the full table.",
+  "Values are block means of the 3 m archive, not native-resolution radar."
+ ],
+ "group": "Baselines",
+ "order": 0,
+ "models": [
+  {
+   "key": "linear_regression",
+   "label": "Linear regression"
+  }
+ ],
+ "primary": "linear_regression",
+ "scales": [
+  {
+   "scale": "3m",
+   "mean_baseline_rmse": 0.6347200311800902,
+   "random_split_r2": 0.247188220363605,
+   "random_split_rmse": 0.5479104241918327,
+   "linear_regression:all": {
+    "mean_r2": -2.2128389731262375,
+    "median_r2": -0.1974981917470717,
+    "rmse": 0.6397526382698632,
+    "skill": -0.035781481893650324
+   },
+   "linear_regression:no_elevation": {
+    "mean_r2": -0.9366806891497443,
+    "median_r2": -0.1575054611406294,
+    "rmse": 0.5980431971719732,
+    "skill": 0.0542966159712391
+   },
+   "linear_regression:no_radar": {
+    "mean_r2": -1.40142137663705,
+    "median_r2": -0.3257976770401001,
+    "rmse": 0.61877718005032,
+    "skill": 0.01060518909376944
+   }
+  },
+  {
+   "scale": "6m",
+   "mean_baseline_rmse": 0.6135357786216032,
+   "random_split_r2": 0.2697931202450051,
+   "random_split_rmse": 0.514663296395282,
+   "linear_regression:all": {
+    "mean_r2": -2.611016011811767,
+    "median_r2": -0.2386628690605394,
+    "rmse": 0.619791765544466,
+    "skill": -0.03882840035786456
+   },
+   "linear_regression:no_elevation": {
+    "mean_r2": -1.0537901511456302,
+    "median_r2": -0.1738772684050598,
+    "rmse": 0.5762063958176691,
+    "skill": 0.05719431105103695
+   },
+   "linear_regression:no_radar": {
+    "mean_r2": -1.5435565624918257,
+    "median_r2": -0.3671492338180542,
+    "rmse": 0.5962995772106174,
+    "skill": 0.0143321875633094
+   }
+  },
+  {
+   "scale": "15m",
+   "mean_baseline_rmse": 0.5829695242662399,
+   "random_split_r2": 0.3029581537760804,
+   "random_split_rmse": 0.4731645013382112,
+   "linear_regression:all": {
+    "mean_r2": -3.698486063542354,
+    "median_r2": -0.3199454327890689,
+    "rmse": 0.5948571816038903,
+    "skill": -0.05152741543992407
+   },
+   "linear_regression:no_elevation": {
+    "mean_r2": -1.2794362684381,
+    "median_r2": -0.2300432007774455,
+    "rmse": 0.5469229325341474,
+    "skill": 0.058139896976231085
+   },
+   "linear_regression:no_radar": {
+    "mean_r2": -1.9495807119778223,
+    "median_r2": -0.4710004329681396,
+    "rmse": 0.5686072416290264,
+    "skill": 0.010952410831701426
+   }
+  },
+  {
+   "scale": "30m",
+   "mean_baseline_rmse": 0.5572692901807382,
+   "random_split_r2": 0.337613093250792,
+   "random_split_rmse": 0.4373728236961265,
+   "linear_regression:all": {
+    "mean_r2": -5.395864392105669,
+    "median_r2": -0.4117287361023014,
+    "rmse": 0.5756956628819226,
+    "skill": -0.06794579304255384
+   },
+   "linear_regression:no_elevation": {
+    "mean_r2": -1.6912891108933028,
+    "median_r2": -0.3677015171286504,
+    "rmse": 0.5250403743490553,
+    "skill": 0.05176724255742017
+   },
+   "linear_regression:no_radar": {
+    "mean_r2": -2.4996755719184875,
+    "median_r2": -0.5713746547698975,
+    "rmse": 0.5460587543248028,
+    "skill": 0.00515653712464284
+   }
+  },
+  {
+   "scale": "60m",
+   "mean_baseline_rmse": 0.5302809564308107,
+   "random_split_r2": 0.4004873920503939,
+   "random_split_rmse": 0.3926204946126712,
+   "linear_regression:all": {
+    "mean_r2": -6.484241592564677,
+    "median_r2": -0.4938403060052061,
+    "rmse": 0.5381311914007141,
+    "skill": -0.04549686281864266
+   },
+   "linear_regression:no_elevation": {
+    "mean_r2": -2.097593397619924,
+    "median_r2": -0.5699928740968012,
+    "rmse": 0.49725756497725,
+    "skill": 0.05382119238131626
+   },
+   "linear_regression:no_radar": {
+    "mean_r2": -3.5026013936315263,
+    "median_r2": -0.6642597913742065,
+    "rmse": 0.5199008888759671,
+    "skill": 0.0020700344374867743
+   }
+  },
+  {
+   "scale": "99m",
+   "mean_baseline_rmse": 0.512374725325071,
+   "random_split_r2": 0.419725749264013,
+   "random_split_rmse": 0.3657499027116417,
+   "linear_regression:all": {
+    "mean_r2": -9.728996386001853,
+    "median_r2": -0.6023553080093615,
+    "rmse": 0.523690087841749,
+    "skill": -0.05714546024226175
+   },
+   "linear_regression:no_elevation": {
+    "mean_r2": -3.1159793658782475,
+    "median_r2": -0.6676073397865014,
+    "rmse": 0.48219737411932273,
+    "skill": 0.04295892654297196
+   },
+   "linear_regression:no_radar": {
+    "mean_r2": -4.78436359337398,
+    "median_r2": -0.7475223541259766,
+    "rmse": 0.5008970283286375,
+    "skill": 0.0005795317526141418
+   }
+  }
+ ],
+ "per_site_30m": [
+  {
+   "site": "banner_summit",
+   "linear_regression": {
+    "r2": 0.1068464273936476,
+    "rmse": 0.3990129950747284,
+    "bias": -0.0731002043892272,
+    "baseline_rmse": 0.4633266879622027
+   }
+  },
+  {
+   "site": "cameron_pass",
+   "linear_regression": {
+    "r2": -0.2493231606596677,
+    "rmse": 0.5013533734780374,
+    "bias": -0.1329022479407223,
+    "baseline_rmse": 0.4609477511483331
+   }
+  },
+  {
+   "site": "dry_creek",
+   "linear_regression": {
+    "r2": -0.5062206533165934,
+    "rmse": 0.4962534096031801,
+    "bias": 0.333748594874751,
+    "baseline_rmse": 0.5132783195691251
+   }
+  },
+  {
+   "site": "fraser",
+   "linear_regression": {
+    "r2": -3.1381963584728503,
+    "rmse": 0.7235720672656661,
+    "bias": 0.6370617472177537,
+    "baseline_rmse": 0.6200986281199365
+   }
+  },
+  {
+   "site": "grand_mesa",
+   "linear_regression": {
+    "r2": -33.42803271107027,
+    "rmse": 0.7065277431067193,
+    "bias": 0.6093301603942667,
+    "baseline_rmse": 0.4199507295652363
+   }
+  },
+  {
+   "site": "little_cottonwood",
+   "linear_regression": {
+    "r2": -0.144395552511642,
+    "rmse": 0.6768847809574696,
+    "bias": -0.2770609593318766,
+    "baseline_rmse": 0.8443143413006978
+   }
+  },
+  {
+   "site": "mores_creek",
+   "linear_regression": {
+    "r2": -0.4117287361023014,
+    "rmse": 0.5262652706876576,
+    "bias": -0.3791155507433545,
+    "baseline_rmse": 0.5789685735996365
+   }
+  }
+ ],
+ "importance_cm": {
+  "3m": [
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 3.467,
+    "linear_regression": 3.467
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 2.494,
+    "linear_regression": 2.494
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 1.443,
+    "linear_regression": 1.443
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 1.265,
+    "linear_regression": 1.265
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 1.086,
+    "linear_regression": 1.086
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.846,
+    "linear_regression": 0.846
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 0.717,
+    "linear_regression": 0.717
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.642,
+    "linear_regression": 0.642
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 0.624,
+    "linear_regression": 0.624
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.153,
+    "linear_regression": 0.153
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.048,
+    "linear_regression": 0.048
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.041,
+    "linear_regression": 0.041
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.026,
+    "linear_regression": 0.026
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.02,
+    "linear_regression": 0.02
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.018,
+    "linear_regression": 0.018
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.005,
+    "linear_regression": 0.005
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.005,
+    "linear_regression": 0.005
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.0,
+    "linear_regression": -0.0
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.002,
+    "linear_regression": -0.002
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.009,
+    "linear_regression": -0.009
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.009,
+    "linear_regression": -0.009
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.011,
+    "linear_regression": -0.011
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.015,
+    "linear_regression": -0.015
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.017,
+    "linear_regression": -0.017
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.021,
+    "linear_regression": -0.021
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.023,
+    "linear_regression": -0.023
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.067,
+    "linear_regression": -0.067
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": -0.199,
+    "linear_regression": -0.199
+   }
+  ],
+  "6m": [
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 4.903,
+    "linear_regression": 4.903
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 2.716,
+    "linear_regression": 2.716
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 1.473,
+    "linear_regression": 1.473
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 1.347,
+    "linear_regression": 1.347
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 1.224,
+    "linear_regression": 1.224
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.895,
+    "linear_regression": 0.895
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 0.768,
+    "linear_regression": 0.768
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.701,
+    "linear_regression": 0.701
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 0.61,
+    "linear_regression": 0.61
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.08,
+    "linear_regression": 0.08
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.078,
+    "linear_regression": 0.078
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.066,
+    "linear_regression": 0.066
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.065,
+    "linear_regression": 0.065
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.048,
+    "linear_regression": 0.048
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.019,
+    "linear_regression": 0.019
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.01,
+    "linear_regression": 0.01
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.009,
+    "linear_regression": 0.009
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.008,
+    "linear_regression": 0.008
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.002,
+    "linear_regression": -0.002
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.006,
+    "linear_regression": -0.006
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.008,
+    "linear_regression": -0.008
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.013,
+    "linear_regression": -0.013
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.013,
+    "linear_regression": -0.013
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.014,
+    "linear_regression": -0.014
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.015,
+    "linear_regression": -0.015
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.021,
+    "linear_regression": -0.021
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.091,
+    "linear_regression": -0.091
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": -0.165,
+    "linear_regression": -0.165
+   }
+  ],
+  "15m": [
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 9.438,
+    "linear_regression": 9.438
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 3.61,
+    "linear_regression": 3.61
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 2.914,
+    "linear_regression": 2.914
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 2.289,
+    "linear_regression": 2.289
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 1.977,
+    "linear_regression": 1.977
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 0.916,
+    "linear_regression": 0.916
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.781,
+    "linear_regression": 0.781
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 0.775,
+    "linear_regression": 0.775
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 0.617,
+    "linear_regression": 0.617
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.478,
+    "linear_regression": 0.478
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.189,
+    "linear_regression": 0.189
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.141,
+    "linear_regression": 0.141
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.084,
+    "linear_regression": 0.084
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.081,
+    "linear_regression": 0.081
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.081,
+    "linear_regression": 0.081
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.032,
+    "linear_regression": 0.032
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.016,
+    "linear_regression": 0.016
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.016,
+    "linear_regression": 0.016
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.015,
+    "linear_regression": 0.015
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.003,
+    "linear_regression": -0.003
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.01,
+    "linear_regression": -0.01
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.018,
+    "linear_regression": -0.018
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.027,
+    "linear_regression": -0.027
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.028,
+    "linear_regression": -0.028
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.031,
+    "linear_regression": -0.031
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.052,
+    "linear_regression": -0.052
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.123,
+    "linear_regression": -0.123
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": -0.234,
+    "linear_regression": -0.234
+   }
+  ],
+  "30m": [
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 18.036,
+    "linear_regression": 18.036
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 6.992,
+    "linear_regression": 6.992
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 6.157,
+    "linear_regression": 6.157
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.003,
+    "linear_regression": 3.003
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 1.793,
+    "linear_regression": 1.793
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 1.463,
+    "linear_regression": 1.463
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 1.408,
+    "linear_regression": 1.408
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 1.091,
+    "linear_regression": 1.091
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 1.002,
+    "linear_regression": 1.002
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.701,
+    "linear_regression": 0.701
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 0.69,
+    "linear_regression": 0.69
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 0.43,
+    "linear_regression": 0.43
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.393,
+    "linear_regression": 0.393
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.12,
+    "linear_regression": 0.12
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.097,
+    "linear_regression": 0.097
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.05,
+    "linear_regression": 0.05
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.026,
+    "linear_regression": 0.026
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.025,
+    "linear_regression": 0.025
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.02,
+    "linear_regression": 0.02
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.011,
+    "linear_regression": 0.011
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.009,
+    "linear_regression": -0.009
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.01,
+    "linear_regression": -0.01
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.017,
+    "linear_regression": -0.017
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.023,
+    "linear_regression": -0.023
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.039,
+    "linear_regression": -0.039
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.123,
+    "linear_regression": -0.123
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.129,
+    "linear_regression": -0.129
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": -0.273,
+    "linear_regression": -0.273
+   }
+  ],
+  "60m": [
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 27.116,
+    "linear_regression": 27.116
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 14.018,
+    "linear_regression": 14.018
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 10.055,
+    "linear_regression": 10.055
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 5.635,
+    "linear_regression": 5.635
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 2.949,
+    "linear_regression": 2.949
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 2.336,
+    "linear_regression": 2.336
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 1.907,
+    "linear_regression": 1.907
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 1.755,
+    "linear_regression": 1.755
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 1.172,
+    "linear_regression": 1.172
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.767,
+    "linear_regression": 0.767
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 0.701,
+    "linear_regression": 0.701
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.679,
+    "linear_regression": 0.679
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 0.454,
+    "linear_regression": 0.454
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.194,
+    "linear_regression": 0.194
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.119,
+    "linear_regression": 0.119
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.102,
+    "linear_regression": 0.102
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.084,
+    "linear_regression": 0.084
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.048,
+    "linear_regression": 0.048
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.047,
+    "linear_regression": 0.047
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.017,
+    "linear_regression": 0.017
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.016,
+    "linear_regression": 0.016
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.013,
+    "linear_regression": 0.013
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.004,
+    "linear_regression": 0.004
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.035,
+    "linear_regression": -0.035
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.048,
+    "linear_regression": -0.048
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.057,
+    "linear_regression": -0.057
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.211,
+    "linear_regression": -0.211
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": -0.258,
+    "linear_regression": -0.258
+   }
+  ],
+  "99m": [
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 30.249,
+    "linear_regression": 30.249
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 17.384,
+    "linear_regression": 17.384
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 11.513,
+    "linear_regression": 11.513
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 11.462,
+    "linear_regression": 11.462
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 2.917,
+    "linear_regression": 2.917
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 2.787,
+    "linear_regression": 2.787
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 2.445,
+    "linear_regression": 2.445
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 2.333,
+    "linear_regression": 2.333
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 2.279,
+    "linear_regression": 2.279
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 1.174,
+    "linear_regression": 1.174
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 1.054,
+    "linear_regression": 1.054
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 0.686,
+    "linear_regression": 0.686
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 0.578,
+    "linear_regression": 0.578
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.409,
+    "linear_regression": 0.409
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.192,
+    "linear_regression": 0.192
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.176,
+    "linear_regression": 0.176
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.161,
+    "linear_regression": 0.161
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.062,
+    "linear_regression": 0.062
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.052,
+    "linear_regression": 0.052
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.04,
+    "linear_regression": 0.04
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.022,
+    "linear_regression": 0.022
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.013,
+    "linear_regression": 0.013
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.009,
+    "linear_regression": 0.009
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.013,
+    "linear_regression": -0.013
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.042,
+    "linear_regression": -0.042
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.054,
+    "linear_regression": -0.054
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": -0.284,
+    "linear_regression": -0.284
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.292,
+    "linear_regression": -0.292
+   }
+  ]
+ },
+ "predictions": [],
+ "featured": false
+}

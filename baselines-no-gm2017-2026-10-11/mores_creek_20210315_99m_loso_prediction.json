@@ -1,0 +1,19 @@
+{
+  "site": "mores_creek",
+  "date": "20210315",
+  "scale": "99m",
+  "blocks": 3475,
+  "radar_scenes_per_block_mean": 8.0,
+  "gbm_rmse": 0.39659395831824473,
+  "gbm_bias": -0.29784723203149976,
+  "gbm_corr": 0.8310444537306446,
+  "gbm_rmse_bias_removed": 0.2618660295243426,
+  "rf_rmse": 0.38132519666554426,
+  "lidar_mean": 1.6075776815414429,
+  "hgb_params": {
+    "learning_rate": 0.1,
+    "max_leaf_nodes": 15
+  },
+  "epsg": 6340,
+  "tif": "mores_creek_20210315_99m_loso_prediction.tif"
+}

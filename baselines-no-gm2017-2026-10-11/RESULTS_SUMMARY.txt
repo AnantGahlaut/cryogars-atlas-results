@@ -1,0 +1,17 @@
+Run: baselines-no-gm2017-2026-10-11
+
+Leave-one-site-out evaluation: for this site, models were trained only on the other six labelled SnowEx sites and never saw this site's data, so these maps show how a model generalizes to new ground. One sample = one 30m block (mean of 3 m cells, kept when >=80% of cells have snow depth and radar geometry) x one LiDAR date x one matched UAVSAR pair (<=5 days). 31 features: radar per polarization (HH, HV, VV: amplitudes in dB and their ratio, coherence, unwrapped phase re-referenced to each scene's median, wrapped phase as cos/sin), local and flat incidence, elevation, slope, aspect (sin/cos), vegetation height, canopy fraction, pair length and LiDAR-radar gap. Training sites weighted equally; up to 60,000 rows per site. Random forest: 300 trees, min_samples_leaf 10, max_features 0.33 (fixed). Gradient boosting: scikit-learn HistGradientBoosting, learning rate and leaf count chosen by grouped cross-validation over the training sites only. Predictions averaged over the radar pairs matched to the date. The labels are absolute depth while one radar pair measures roughly a week of change, so terrain and canopy dominate these baselines. Grand Mesa 2017 rows (five ASO surveys) are excluded from training and testing in this run: about 70% have no canopy input and most radar scenes there are HH-only.
+
+All held-out sites at 30m (R2 / RMSE m / bias m):
+                                 r2                            rmse                            bias              
+model             gradient_boosting random_forest gradient_boosting random_forest gradient_boosting random_forest
+test_site                                                                                                        
+banner_summit                 0.125         0.181             0.395         0.382             0.174         0.146
+cameron_pass                 -0.108         0.089             0.472         0.428            -0.237        -0.143
+dry_creek                     0.345         0.109             0.327         0.382             0.142         0.234
+fraser                       -2.504        -2.048             0.666         0.621             0.541         0.511
+grand_mesa                  -37.813       -10.711             0.750         0.412             0.661         0.376
+little_cottonwood            -0.575        -0.591             0.794         0.798            -0.400        -0.414
+mores_creek                   0.068         0.103             0.428         0.420            -0.311        -0.320
+
+Same data scored the old way (random pixel split, random forest): R2 0.819, RMSE 0.229 m.

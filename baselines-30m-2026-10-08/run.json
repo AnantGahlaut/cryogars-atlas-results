@@ -1,8 +1,8 @@
 {
  "id": "baselines-30m-2026-10-08",
- "title": "Random Forest Baseline",
+ "title": "Random Forest Baseline \u00b7 first run",
  "date": "2026-10-08",
- "summary": "Random forest, with gradient boosting for comparison, predicting LiDAR snow depth from UAVSAR, terrain and canopy at seven SnowEx sites. Each site is scored by models that never saw it. This replaces last year's in-sample evaluation and is the reference every later model has to beat.",
+ "summary": "The first run of this baseline, from 2026-10-08. Same models and inputs as the current run, but the data still included Grand Mesa's five 2017 surveys. The 2026-10-11 run replaces it; this one is kept as a record.",
  "findings": [
   "Random pixel splits overstate skill, and more so at coarser blocks: R\u00b2 rises from 0.54 to 0.78 the old way while it falls on unseen sites.",
   "Most error is each site's overall snow amount (bias up to \u00b10.5 m). The spatial pattern is partly captured: correlation 0.5\u20130.75 at Mores Creek, Dry Creek and Banner Summit, about 0.1 at Grand Mesa.",
@@ -12,7 +12,7 @@
  ],
  "training": {
   "evaluation": "Leave-one-site-out: each of the 7 labelled sites is predicted by models trained only on the other 6, so every number and map shows generalisation to unseen ground. Reynolds Creek has no snow-depth labels and is not used.",
-  "data": "SnowEx Field Atlas v1.0.05 (enrichment 3.3.0) on Borah. One sample = one block of 3 m cells (3, 6, 15, 30, 60 or 99 m; cell means, kept when >=80% of cells have snow depth and radar geometry) x one LiDAR snow-depth date x one UAVSAR interferometric pair within 5 days. 13 LiDAR dates across 7 sites.",
+  "data": "SnowEx Field Atlas v1.0.05 (enrichment 3.3.0). One sample = one block of 3 m cells (3, 6, 15, 30, 60 or 99 m; cell means, kept when >=80% of cells have snow depth and radar geometry) x one LiDAR snow-depth date x one UAVSAR interferometric pair within 5 days. 13 LiDAR dates across 7 sites.",
   "features": [
    "Radar, per polarisation HH / HV / VV: amplitude pass 1 and 2 (dB), amplitude ratio (dB), coherence, unwrapped phase re-referenced to each scene's median, wrapped phase as cos/sin",
    "Geometry: local and flat incidence angle",
@@ -26,7 +26,8 @@
   ],
   "sampling": "Up to 60,000 training rows per site, sites weighted equally so Grand Mesa cannot dominate. The held-out site is never used for fitting, tuning or early stopping.",
   "reference": "Every model is compared with predicting the training mean; the old evaluation style (random 80/20 pixel split, all sites pooled) is run on the same rows for contrast.",
-  "code": "scripts/ml/ in the private cryogars-atlas-results repository; Slurm jobs on Borah."
+  "code": "scripts/ml/ in the cryogars-atlas-results repository.",
+  "archive_url": "https://github.com/cryogars/cryogars-atlas/tree/v1.0.05"
  },
  "limits": [
   "Labels are absolute snow depth while one radar pair measures about a week of change, so terrain and canopy dominate these baselines.",
@@ -34,10 +35,13 @@
   "Each block appears once per matched radar pair; prediction maps average those pairs.",
   "Values are block means of the 3 m archive, not native-resolution radar."
  ],
+ "group": "Baselines",
  "scales": [
   {
    "scale": "3m",
    "random_split_r2": 0.5428910714646162,
+   "random_split_rmse": 0.4608199046926704,
+   "mean_baseline_rmse": 0.6869084615126082,
    "random_forest:all": {
     "mean_r2": -0.11297533705494224,
     "median_r2": 0.1218195016892106,
@@ -78,6 +82,8 @@
   {
    "scale": "6m",
    "random_split_r2": 0.5819643691282589,
+   "random_split_rmse": 0.4214840985998878,
+   "mean_baseline_rmse": 0.6619276355626141,
    "random_forest:all": {
     "mean_r2": -0.16775494522426646,
     "median_r2": 0.1049175333459447,
@@ -118,6 +124,8 @@
   {
    "scale": "15m",
    "random_split_r2": 0.6456804321675718,
+   "random_split_rmse": 0.365003345452275,
+   "mean_baseline_rmse": 0.6264531850784139,
    "random_forest:all": {
     "mean_r2": -0.2032619321857485,
     "median_r2": 0.1148846129996975,
@@ -158,6 +166,8 @@
   {
    "scale": "30m",
    "random_split_r2": 0.7101485870817991,
+   "random_split_rmse": 0.3122729953286662,
+   "mean_baseline_rmse": 0.5963912118653834,
    "random_forest:all": {
     "mean_r2": -0.2971805979256108,
     "median_r2": 0.0928304269020771,
@@ -198,6 +208,8 @@
   {
    "scale": "60m",
    "random_split_r2": 0.7809856620720511,
+   "random_split_rmse": 0.2537598164853701,
+   "mean_baseline_rmse": 0.558217659549803,
    "random_forest:all": {
     "mean_r2": -0.4059424091930367,
     "median_r2": 0.0574361154768152,
@@ -238,6 +250,8 @@
   {
    "scale": "99m",
    "random_split_r2": 0.7662732316849767,
+   "random_split_rmse": 0.2482397819856431,
+   "mean_baseline_rmse": 0.5345469245413224,
    "random_forest:all": {
     "mean_r2": -0.5057158521014629,
     "median_r2": 0.0563676481769931,
@@ -1704,6 +1718,11 @@
    "site": "banner_summit",
    "date": "20210315",
    "blocks": 185165,
+   "rf_bias": 0.21039936997335554,
+   "rf_corr": 0.6956458526143765,
+   "rf_rmse_map": 0.37793450094004755,
+   "rf_rmse_bias_removed": 0.31395316866631223,
+   "lidar_std": 0.4312354685141477,
    "explorer": "banner_summit_results_explorer.html",
    "tifs": {
     "30 m": "banner_summit_20210315_30m_loso_prediction.tif",
@@ -1720,6 +1739,11 @@
    "site": "cameron_pass",
    "date": "20210319",
    "blocks": 23528,
+   "rf_bias": -0.0424560388496806,
+   "rf_corr": 0.6083823554651713,
+   "rf_rmse_map": 0.3725954342186036,
+   "rf_rmse_bias_removed": 0.37016866745545085,
+   "lidar_std": 0.4485455432893058,
    "explorer": "cameron_pass_results_explorer.html",
    "tifs": {
     "30 m": "cameron_pass_20210319_30m_loso_prediction.tif",
@@ -1736,6 +1760,11 @@
    "site": "dry_creek",
    "date": "20200219",
    "blocks": 41742,
+   "rf_bias": 0.22776682020732317,
+   "rf_corr": 0.664848625802814,
+   "rf_rmse_map": 0.3790734652313189,
+   "rf_rmse_bias_removed": 0.30301644782936266,
+   "lidar_std": 0.404351635913233,
    "explorer": "dry_creek_results_explorer.html",
    "tifs": {
     "30 m": "dry_creek_20200219_30m_loso_prediction.tif",
@@ -1752,6 +1781,11 @@
    "site": "fraser",
    "date": "20210319",
    "blocks": 69190,
+   "rf_bias": 0.5260361315760861,
+   "rf_corr": 0.29485567926755535,
+   "rf_rmse_map": 0.6315760869510548,
+   "rf_rmse_bias_removed": 0.34953446451655235,
+   "lidar_std": 0.3418727935282576,
    "explorer": "fraser_results_explorer.html",
    "tifs": {
     "30 m": "fraser_20210319_30m_loso_prediction.tif",
@@ -1768,6 +1802,11 @@
    "site": "grand_mesa",
    "date": "20200201",
    "blocks": 63006,
+   "rf_bias": 0.37639277818312483,
+   "rf_corr": 0.4550026854729762,
+   "rf_rmse_map": 0.4015374127706632,
+   "rf_rmse_bias_removed": 0.13985982406018863,
+   "lidar_std": 0.12041292784879803,
    "explorer": "grand_mesa_results_explorer.html",
    "tifs": {
     "30 m": "grand_mesa_20200201_30m_loso_prediction.tif",
@@ -1784,6 +1823,11 @@
    "site": "little_cottonwood",
    "date": "20210318",
    "blocks": 30970,
+   "rf_bias": -0.38039047574768164,
+   "rf_corr": 0.29102087213309674,
+   "rf_rmse_map": 0.724178045532583,
+   "rf_rmse_bias_removed": 0.6162279834540495,
+   "lidar_std": 0.6327420087048476,
    "explorer": "little_cottonwood_results_explorer.html",
    "tifs": {
     "30 m": "little_cottonwood_20210318_30m_loso_prediction.tif",
@@ -1800,6 +1844,11 @@
    "site": "mores_creek",
    "date": "20210315",
    "blocks": 38319,
+   "rf_bias": -0.30907729476878504,
+   "rf_corr": 0.8617047453613084,
+   "rf_rmse_map": 0.40678708033973693,
+   "rf_rmse_bias_removed": 0.2644748657051122,
+   "lidar_std": 0.4578357176560446,
    "explorer": "mores_creek_results_explorer.html",
    "tifs": {
     "30 m": "mores_creek_20210315_30m_loso_prediction.tif",
@@ -1812,5 +1861,7 @@
    "rmse_bias_removed": 0.29293187181334396,
    "lidar_mean": 1.6047178506851196
   }
- ]
+ ],
+ "order": 3,
+ "featured": false
 }

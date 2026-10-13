@@ -1,0 +1,19 @@
+{
+  "site": "dry_creek",
+  "date": "20200219",
+  "scale": "99m",
+  "blocks": 3770,
+  "radar_scenes_per_block_mean": 2.0,
+  "gbm_rmse": 0.27787290698449335,
+  "gbm_bias": 0.12182809898740032,
+  "gbm_corr": 0.7456627562504806,
+  "gbm_rmse_bias_removed": 0.2497424257958555,
+  "rf_rmse": 0.34856820337819233,
+  "lidar_mean": 1.0546159744262695,
+  "hgb_params": {
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15
+  },
+  "epsg": 6340,
+  "tif": "dry_creek_20200219_99m_loso_prediction.tif"
+}

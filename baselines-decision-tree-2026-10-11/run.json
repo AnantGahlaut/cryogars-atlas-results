@@ -1,0 +1,1387 @@
+{
+ "id": "baselines-decision-tree-2026-10-11",
+ "title": "Decision tree",
+ "date": "2026-10-11",
+ "summary": "One regression tree, the building block of the random forest. Same data and evaluation as the Random Forest Baseline: each site is scored by a model trained only on the other six, Grand Mesa's 2017 surveys are excluded.",
+ "findings": [
+  "On unseen sites at 30 m the RMSE is 0.59 m, 7% higher than predicting the training sites' mean depth (0.56 m). It beats the mean at 2 of 7 sites.",
+  "Across block sizes the unseen-site RMSE runs from 0.52 to 0.64 m.",
+  "Scored the old way, on a random pixel split, R\u00b2 is 0.65 at 30 m.",
+  "A single tree is clearly worse than the random forest's 300 trees on the same inputs (0.49 m at 30 m)."
+ ],
+ "training": {
+  "evaluation": "Leave-one-site-out: each of the 7 labelled sites is predicted by models trained only on the other 6, so every number and map shows generalisation to unseen ground. Reynolds Creek has no snow-depth labels and is not used.",
+  "data": "SnowEx Field Atlas v1.0.05 (enrichment 3.3.0). One sample = one block of 3 m cells (3, 6, 15, 30, 60 or 99 m; cell means, kept when >=80% of cells have snow depth and radar geometry) x one LiDAR snow-depth date x one UAVSAR interferometric pair within 5 days. 10 site-surveys on 8 LiDAR dates across 7 sites. Grand Mesa's five 2017 surveys are excluded (about 70% of those rows have no canopy input and most of their radar scenes are HH-only), so Grand Mesa is trained and scored on its 2020 survey only.",
+  "features": [
+   "Radar, per polarisation HH / HV / VV: amplitude pass 1 and 2 (dB), amplitude ratio (dB), coherence, unwrapped phase re-referenced to each scene's median, wrapped phase as cos/sin",
+   "Geometry: local and flat incidence angle",
+   "Terrain: elevation, slope, aspect as sin/cos",
+   "Canopy: vegetation height, canopy fraction (nearest vegetation date)",
+   "Timing: radar pair length, LiDAR-radar gap (days)"
+  ],
+  "models": [
+   "Decision tree: one regression tree, depth at most 10, at least 10 rows per leaf, all 31 inputs."
+  ],
+  "sampling": "Up to 60,000 training rows per site, sites weighted equally so Grand Mesa cannot dominate. The held-out site is never used for fitting, tuning or early stopping.",
+  "reference": "Every model is compared with predicting the training mean; the old evaluation style (random 80/20 pixel split, all sites pooled) is run on the same rows for contrast.",
+  "code": "scripts/ml/ in the cryogars-atlas-results repository.",
+  "archive_url": "https://github.com/cryogars/cryogars-atlas/tree/v1.0.05"
+ },
+ "limits": [
+  "Labels are absolute snow depth while one radar pair measures about a week of change, so terrain and canopy dominate these baselines.",
+  "Mean R\u00b2 is not a headline number here. R\u00b2 compares a model with the held-out site's own mean depth, so a site with a narrow range of depths and an error in overall level scores far below zero (Grand Mesa 2020 \u2248 \u221211, Fraser \u2248 \u22122) and dominates the average. RMSE, error vs predicting the mean and median R\u00b2 are reported instead; mean R\u00b2 is listed in the full table.",
+  "Values are block means of the 3 m archive, not native-resolution radar."
+ ],
+ "group": "Baselines",
+ "order": 1,
+ "models": [
+  {
+   "key": "decision_tree",
+   "label": "Decision tree"
+  }
+ ],
+ "primary": "decision_tree",
+ "scales": [
+  {
+   "scale": "3m",
+   "mean_baseline_rmse": 0.6347200311800902,
+   "random_split_r2": 0.4714415955297671,
+   "random_split_rmse": 0.4591058762480079,
+   "decision_tree:all": {
+    "mean_r2": -1.7063228494656342,
+    "median_r2": -0.2141652138011085,
+    "rmse": 0.6363724224872583,
+    "skill": -0.011723915507310056
+   },
+   "decision_tree:no_elevation": {
+    "mean_r2": -0.8226610915010074,
+    "median_r2": -0.3741155125550286,
+    "rmse": 0.6189600622677084,
+    "skill": 0.032664767693701184
+   },
+   "decision_tree:no_radar": {
+    "mean_r2": -4.369196386890353,
+    "median_r2": -0.260492182893308,
+    "rmse": 0.6905827935934993,
+    "skill": -0.12891418607865776
+   }
+  },
+  {
+   "scale": "6m",
+   "mean_baseline_rmse": 0.6135357786216032,
+   "random_split_r2": 0.5305209674130664,
+   "random_split_rmse": 0.4126751688089008,
+   "decision_tree:all": {
+    "mean_r2": -1.7635512327797258,
+    "median_r2": -0.208250859604085,
+    "rmse": 0.6143356342251352,
+    "skill": -0.002561842150014632
+   },
+   "decision_tree:no_elevation": {
+    "mean_r2": -1.0741204166474996,
+    "median_r2": -0.3779773793981142,
+    "rmse": 0.5971787531566397,
+    "skill": 0.029684676356042657
+   },
+   "decision_tree:no_radar": {
+    "mean_r2": -1.4533555678076409,
+    "median_r2": -0.2712473557811921,
+    "rmse": 0.6076206666923428,
+    "skill": 0.019375332743987842
+   }
+  },
+  {
+   "scale": "15m",
+   "mean_baseline_rmse": 0.5829695242662399,
+   "random_split_r2": 0.5886337008411799,
+   "random_split_rmse": 0.3634938637809419,
+   "decision_tree:all": {
+    "mean_r2": -2.007207376134148,
+    "median_r2": -0.4599486955683334,
+    "rmse": 0.5976066841397413,
+    "skill": -0.016154868358885917
+   },
+   "decision_tree:no_elevation": {
+    "mean_r2": -1.5773656730041752,
+    "median_r2": -0.5819513484477288,
+    "rmse": 0.5905719541218956,
+    "skill": -0.004454904801028099
+   },
+   "decision_tree:no_radar": {
+    "mean_r2": -1.5975747748622624,
+    "median_r2": -0.3874495812959226,
+    "rmse": 0.5725124815813031,
+    "skill": 0.02736782324346385
+   }
+  },
+  {
+   "scale": "30m",
+   "mean_baseline_rmse": 0.5572692901807382,
+   "random_split_r2": 0.6474745816027501,
+   "random_split_rmse": 0.3190737990101343,
+   "decision_tree:all": {
+    "mean_r2": -3.978139867060516,
+    "median_r2": -0.5326486861267956,
+    "rmse": 0.5923871868694973,
+    "skill": -0.06815422989892748
+   },
+   "decision_tree:no_elevation": {
+    "mean_r2": -2.1510684954951245,
+    "median_r2": -0.7605156618338338,
+    "rmse": 0.5743494747911673,
+    "skill": -0.023632309108914454
+   },
+   "decision_tree:no_radar": {
+    "mean_r2": -3.2775472617687007,
+    "median_r2": -0.49889516453495,
+    "rmse": 0.567457053000905,
+    "skill": -0.02255824435735691
+   }
+  },
+  {
+   "scale": "60m",
+   "mean_baseline_rmse": 0.5302809564308107,
+   "random_split_r2": 0.7396250532681883,
+   "random_split_rmse": 0.258745855676511,
+   "decision_tree:all": {
+    "mean_r2": -3.325856395877743,
+    "median_r2": -0.4061279145072558,
+    "rmse": 0.5361738430153222,
+    "skill": 0.0037166358778630442
+   },
+   "decision_tree:no_elevation": {
+    "mean_r2": -3.6055970736941587,
+    "median_r2": -1.0408983442444986,
+    "rmse": 0.5671537140104307,
+    "skill": -0.07257941042713585
+   },
+   "decision_tree:no_radar": {
+    "mean_r2": -2.955935684128775,
+    "median_r2": -0.7171212534377642,
+    "rmse": 0.5428813798960032,
+    "skill": -0.008182144786226206
+   }
+  },
+  {
+   "scale": "99m",
+   "mean_baseline_rmse": 0.512374725325071,
+   "random_split_r2": 0.766056551132439,
+   "random_split_rmse": 0.2322325086550129,
+   "decision_tree:all": {
+    "mean_r2": -4.7147002860896725,
+    "median_r2": -0.7673561787249059,
+    "rmse": 0.5183672592713312,
+    "skill": -0.008465866153846249
+   },
+   "decision_tree:no_elevation": {
+    "mean_r2": -2.7658140577523582,
+    "median_r2": -1.0429625056984806,
+    "rmse": 0.5175013868594419,
+    "skill": -0.011493965147126362
+   },
+   "decision_tree:no_radar": {
+    "mean_r2": -5.5537572857808595,
+    "median_r2": -1.2461470639941703,
+    "rmse": 0.5377135148897686,
+    "skill": -0.05871801178467938
+   }
+  }
+ ],
+ "per_site_30m": [
+  {
+   "site": "banner_summit",
+   "decision_tree": {
+    "r2": -0.2234867911861056,
+    "rmse": 0.4670072391646379,
+    "bias": 0.1127551458831337,
+    "baseline_rmse": 0.4633266879622027
+   }
+  },
+  {
+   "site": "cameron_pass",
+   "decision_tree": {
+    "r2": -0.5326486861267956,
+    "rmse": 0.5553002315177191,
+    "bias": -0.1853525325941446,
+    "baseline_rmse": 0.4609477511483331
+   }
+  },
+  {
+   "site": "dry_creek",
+   "decision_tree": {
+    "r2": -0.0903968306341305,
+    "rmse": 0.422232340617947,
+    "bias": 0.2415707655080061,
+    "baseline_rmse": 0.5132783195691251
+   }
+  },
+  {
+   "site": "fraser",
+   "decision_tree": {
+    "r2": -2.850326027325618,
+    "rmse": 0.6979511038655777,
+    "bias": 0.5170282785042205,
+    "baseline_rmse": 0.6200986281199365
+   }
+  },
+  {
+   "site": "grand_mesa",
+   "decision_tree": {
+    "r2": -22.77957689321909,
+    "rmse": 0.5871853044751577,
+    "bias": 0.3862996719667121,
+    "baseline_rmse": 0.4199507295652363
+   }
+  },
+  {
+   "site": "little_cottonwood",
+   "decision_tree": {
+    "r2": -1.3763552720789425,
+    "rmse": 0.975399106930853,
+    "bias": -0.4634485043916669,
+    "baseline_rmse": 0.8443143413006978
+   }
+  },
+  {
+   "site": "mores_creek",
+   "decision_tree": {
+    "r2": 0.0058114311470749,
+    "rmse": 0.4416349815145886,
+    "bias": -0.31626866145625,
+    "baseline_rmse": 0.5789685735996365
+   }
+  }
+ ],
+ "importance_cm": {
+  "3m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 2.867,
+    "decision_tree": 2.867
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 2.38,
+    "decision_tree": 2.38
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 2.262,
+    "decision_tree": 2.262
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.741,
+    "decision_tree": 1.741
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.131,
+    "decision_tree": 1.131
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.384,
+    "decision_tree": 0.384
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.234,
+    "decision_tree": 0.234
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.122,
+    "decision_tree": 0.122
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.113,
+    "decision_tree": 0.113
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.108,
+    "decision_tree": 0.108
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.039,
+    "decision_tree": 0.039
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.019,
+    "decision_tree": 0.019
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.01,
+    "decision_tree": 0.01
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.008,
+    "decision_tree": 0.008
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.007,
+    "decision_tree": 0.007
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.004,
+    "decision_tree": 0.004
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.001,
+    "decision_tree": 0.001
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.001,
+    "decision_tree": 0.001
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.001,
+    "decision_tree": 0.001
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.0,
+    "decision_tree": -0.0
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.0,
+    "decision_tree": -0.0
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.001,
+    "decision_tree": -0.001
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.001,
+    "decision_tree": -0.001
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.001,
+    "decision_tree": -0.001
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.001,
+    "decision_tree": -0.001
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.013,
+    "decision_tree": -0.013
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.023,
+    "decision_tree": -0.023
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.053,
+    "decision_tree": -0.053
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.06,
+    "decision_tree": -0.06
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.123,
+    "decision_tree": -0.123
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.195,
+    "decision_tree": -0.195
+   }
+  ],
+  "6m": [
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 3.267,
+    "decision_tree": 3.267
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.15,
+    "decision_tree": 3.15
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 2.927,
+    "decision_tree": 2.927
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.869,
+    "decision_tree": 1.869
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.769,
+    "decision_tree": 1.769
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.393,
+    "decision_tree": 0.393
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.347,
+    "decision_tree": 0.347
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.117,
+    "decision_tree": 0.117
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.104,
+    "decision_tree": 0.104
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.094,
+    "decision_tree": 0.094
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.073,
+    "decision_tree": 0.073
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.07,
+    "decision_tree": 0.07
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.068,
+    "decision_tree": 0.068
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.058,
+    "decision_tree": 0.058
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.034,
+    "decision_tree": 0.034
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.022,
+    "decision_tree": 0.022
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.01,
+    "decision_tree": 0.01
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.006,
+    "decision_tree": 0.006
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.002,
+    "decision_tree": 0.002
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.002,
+    "decision_tree": 0.002
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.001,
+    "decision_tree": 0.001
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.004,
+    "decision_tree": -0.004
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.005,
+    "decision_tree": -0.005
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.009,
+    "decision_tree": -0.009
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.013,
+    "decision_tree": -0.013
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.013,
+    "decision_tree": -0.013
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.015,
+    "decision_tree": -0.015
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.036,
+    "decision_tree": -0.036
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.074,
+    "decision_tree": -0.074
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": -0.091,
+    "decision_tree": -0.091
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.155,
+    "decision_tree": -0.155
+   }
+  ],
+  "15m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.623,
+    "decision_tree": 3.623
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 2.6,
+    "decision_tree": 2.6
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 2.164,
+    "decision_tree": 2.164
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.658,
+    "decision_tree": 1.658
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.596,
+    "decision_tree": 1.596
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 1.263,
+    "decision_tree": 1.263
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.264,
+    "decision_tree": 0.264
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.259,
+    "decision_tree": 0.259
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.146,
+    "decision_tree": 0.146
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.093,
+    "decision_tree": 0.093
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": 0.085,
+    "decision_tree": 0.085
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": 0.046,
+    "decision_tree": 0.046
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.045,
+    "decision_tree": 0.045
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.038,
+    "decision_tree": 0.038
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.013,
+    "decision_tree": 0.013
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.011,
+    "decision_tree": 0.011
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.011,
+    "decision_tree": 0.011
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.009,
+    "decision_tree": 0.009
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.008,
+    "decision_tree": 0.008
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.005,
+    "decision_tree": 0.005
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.002,
+    "decision_tree": 0.002
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.0,
+    "decision_tree": -0.0
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.001,
+    "decision_tree": -0.001
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.002,
+    "decision_tree": -0.002
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.004,
+    "decision_tree": -0.004
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.005,
+    "decision_tree": -0.005
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.012,
+    "decision_tree": -0.012
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.019,
+    "decision_tree": -0.019
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.06,
+    "decision_tree": -0.06
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.112,
+    "decision_tree": -0.112
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.114,
+    "decision_tree": -0.114
+   }
+  ],
+  "30m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.52,
+    "decision_tree": 3.52
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 2.625,
+    "decision_tree": 2.625
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.652,
+    "decision_tree": 1.652
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.368,
+    "decision_tree": 1.368
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 0.992,
+    "decision_tree": 0.992
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.519,
+    "decision_tree": 0.519
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.4,
+    "decision_tree": 0.4
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.388,
+    "decision_tree": 0.388
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.363,
+    "decision_tree": 0.363
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.294,
+    "decision_tree": 0.294
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.197,
+    "decision_tree": 0.197
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.154,
+    "decision_tree": 0.154
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": 0.13,
+    "decision_tree": 0.13
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.055,
+    "decision_tree": 0.055
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.052,
+    "decision_tree": 0.052
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": 0.048,
+    "decision_tree": 0.048
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.029,
+    "decision_tree": 0.029
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.024,
+    "decision_tree": 0.024
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.017,
+    "decision_tree": 0.017
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.011,
+    "decision_tree": 0.011
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.01,
+    "decision_tree": 0.01
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.0,
+    "decision_tree": 0.0
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.003,
+    "decision_tree": -0.003
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.003,
+    "decision_tree": -0.003
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.006,
+    "decision_tree": -0.006
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.007,
+    "decision_tree": -0.007
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.009,
+    "decision_tree": -0.009
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.032,
+    "decision_tree": -0.032
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.049,
+    "decision_tree": -0.049
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": -0.06,
+    "decision_tree": -0.06
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.074,
+    "decision_tree": -0.074
+   }
+  ],
+  "60m": [
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 3.369,
+    "decision_tree": 3.369
+   },
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 3.305,
+    "decision_tree": 3.305
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 2.408,
+    "decision_tree": 2.408
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 2.04,
+    "decision_tree": 2.04
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 1.954,
+    "decision_tree": 1.954
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.554,
+    "decision_tree": 1.554
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.114,
+    "decision_tree": 0.114
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.108,
+    "decision_tree": 0.108
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.083,
+    "decision_tree": 0.083
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": 0.079,
+    "decision_tree": 0.079
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.074,
+    "decision_tree": 0.074
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": 0.07,
+    "decision_tree": 0.07
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.05,
+    "decision_tree": 0.05
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.046,
+    "decision_tree": 0.046
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.044,
+    "decision_tree": 0.044
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.027,
+    "decision_tree": 0.027
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.024,
+    "decision_tree": 0.024
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.019,
+    "decision_tree": 0.019
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.003,
+    "decision_tree": 0.003
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.002,
+    "decision_tree": -0.002
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.003,
+    "decision_tree": -0.003
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.005,
+    "decision_tree": -0.005
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.006,
+    "decision_tree": -0.006
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.009,
+    "decision_tree": -0.009
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.009,
+    "decision_tree": -0.009
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.025,
+    "decision_tree": -0.025
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.031,
+    "decision_tree": -0.031
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.034,
+    "decision_tree": -0.034
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.061,
+    "decision_tree": -0.061
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": -0.081,
+    "decision_tree": -0.081
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.088,
+    "decision_tree": -0.088
+   }
+  ],
+  "99m": [
+   {
+    "feature": "elevation",
+    "group": "Terrain",
+    "cm": 3.52,
+    "decision_tree": 3.52
+   },
+   {
+    "feature": "aspect_cos",
+    "group": "Terrain",
+    "cm": 2.898,
+    "decision_tree": 2.898
+   },
+   {
+    "feature": "slope",
+    "group": "Terrain",
+    "cm": 1.988,
+    "decision_tree": 1.988
+   },
+   {
+    "feature": "aspect_sin",
+    "group": "Terrain",
+    "cm": 1.52,
+    "decision_tree": 1.52
+   },
+   {
+    "feature": "veg_height",
+    "group": "Canopy",
+    "cm": 0.811,
+    "decision_tree": 0.811
+   },
+   {
+    "feature": "canopy_fraction",
+    "group": "Canopy",
+    "cm": 0.547,
+    "decision_tree": 0.547
+   },
+   {
+    "feature": "inc_flat",
+    "group": "Radar geometry",
+    "cm": 0.179,
+    "decision_tree": 0.179
+   },
+   {
+    "feature": "HH_unw_rel",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.086,
+    "decision_tree": 0.086
+   },
+   {
+    "feature": "HH_amp_ratio_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.072,
+    "decision_tree": 0.072
+   },
+   {
+    "feature": "VV_unw_rel",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.06,
+    "decision_tree": 0.06
+   },
+   {
+    "feature": "gap_days",
+    "group": "Timing",
+    "cm": 0.048,
+    "decision_tree": 0.048
+   },
+   {
+    "feature": "HV_unw_rel",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.043,
+    "decision_tree": 0.043
+   },
+   {
+    "feature": "HV_wrapped_sin",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.043,
+    "decision_tree": 0.043
+   },
+   {
+    "feature": "VV_amp2_db",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.035,
+    "decision_tree": 0.035
+   },
+   {
+    "feature": "HV_coherence",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.032,
+    "decision_tree": 0.032
+   },
+   {
+    "feature": "HH_amp2_db",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.008,
+    "decision_tree": 0.008
+   },
+   {
+    "feature": "VV_wrapped_sin",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.006,
+    "decision_tree": 0.006
+   },
+   {
+    "feature": "HH_wrapped_cos",
+    "group": "Radar \u00b7 HH",
+    "cm": 0.002,
+    "decision_tree": 0.002
+   },
+   {
+    "feature": "VV_wrapped_cos",
+    "group": "Radar \u00b7 VV",
+    "cm": 0.001,
+    "decision_tree": 0.001
+   },
+   {
+    "feature": "pair_days",
+    "group": "Timing",
+    "cm": 0.001,
+    "decision_tree": 0.001
+   },
+   {
+    "feature": "HV_wrapped_cos",
+    "group": "Radar \u00b7 HV",
+    "cm": 0.0,
+    "decision_tree": 0.0
+   },
+   {
+    "feature": "inc_local",
+    "group": "Radar geometry",
+    "cm": -0.0,
+    "decision_tree": -0.0
+   },
+   {
+    "feature": "HH_amp1_db",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.005,
+    "decision_tree": -0.005
+   },
+   {
+    "feature": "VV_coherence",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.014,
+    "decision_tree": -0.014
+   },
+   {
+    "feature": "HV_amp_ratio_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.025,
+    "decision_tree": -0.025
+   },
+   {
+    "feature": "HH_wrapped_sin",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.026,
+    "decision_tree": -0.026
+   },
+   {
+    "feature": "HV_amp1_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.026,
+    "decision_tree": -0.026
+   },
+   {
+    "feature": "HV_amp2_db",
+    "group": "Radar \u00b7 HV",
+    "cm": -0.056,
+    "decision_tree": -0.056
+   },
+   {
+    "feature": "VV_amp_ratio_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.094,
+    "decision_tree": -0.094
+   },
+   {
+    "feature": "VV_amp1_db",
+    "group": "Radar \u00b7 VV",
+    "cm": -0.217,
+    "decision_tree": -0.217
+   },
+   {
+    "feature": "HH_coherence",
+    "group": "Radar \u00b7 HH",
+    "cm": -0.235,
+    "decision_tree": -0.235
+   }
+  ]
+ },
+ "predictions": [],
+ "featured": false
+}

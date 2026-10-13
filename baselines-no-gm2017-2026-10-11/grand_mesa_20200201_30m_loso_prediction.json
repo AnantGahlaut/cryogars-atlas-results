@@ -1,0 +1,19 @@
+{
+  "site": "grand_mesa",
+  "date": "20200201",
+  "scale": "30m",
+  "blocks": 63006,
+  "radar_scenes_per_block_mean": 4.0,
+  "gbm_rmse": 0.7142186214079743,
+  "gbm_bias": 0.6608523401182942,
+  "gbm_corr": 0.31028044139081856,
+  "gbm_rmse_bias_removed": 0.2708918107437885,
+  "rf_rmse": 0.4015374129542635,
+  "lidar_mean": 0.9786912798881531,
+  "hgb_params": {
+    "learning_rate": 0.1,
+    "max_leaf_nodes": 15
+  },
+  "epsg": 32612,
+  "tif": "grand_mesa_20200201_30m_loso_prediction.tif"
+}
